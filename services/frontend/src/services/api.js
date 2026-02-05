@@ -44,6 +44,22 @@ export const updateIxpConfig = async (config) => {
     return response.data;
 };
 
+export const listResourceFiles = async () => {
+    const response = await api.get('/resources/files');
+    return response.data;
+};
+
+export const uploadResourceFile = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/resources/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};
+
 export const runQuarantineCheck = async (data) => {
     const response = await api.post('/quarantine/check', data);
     return response.data;

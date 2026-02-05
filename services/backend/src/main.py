@@ -4,7 +4,7 @@ from typing import Optional
 import json
 
 from Kathara.setting.Setting import Setting
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -381,6 +381,45 @@ async def update_ixp_config(config: dict):
     except Exception as e:
         logger.error(f"Failed to write ixp.conf: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to write ixp.conf: {str(e)}")
+
+
+@app.get("/resources/files")
+async def list_resource_files():
+    """List all files in the resources directory."""
+    try:
+        if not os.path.exists(ixp_resource_path):
+            return {"files": []}
+        
+        files = []
+        for filename in os.listdir(ixp_resource_path):
+            filepath = os.path.join(ixp_resource_path, filename)
+            if os.path.isfile(filepath) and filename != '.gitkeep':
+                files.append(filename)
+        
+        return {"files": sorted(files)}
+    except Exception as e:
+        logger.error(f"Failed to list resource files: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list resource files: {str(e)}")
+
+
+@app.post("/resources/upload")
+async def upload_resource_file(file: UploadFile = File(...)):
+    """Upload a file to the resources directory."""
+    try:
+        # Create resources directory if it doesn't exist
+        os.makedirs(ixp_resource_path, exist_ok=True)
+        
+        # Save file
+        filepath = os.path.join(ixp_resource_path, file.filename)
+        with open(filepath, 'wb') as f:
+            content = await file.read()
+            f.write(content)
+        
+        logger.info(f"File uploaded: {file.filename}")
+        return {"status": "success", "filename": file.filename, "message": f"File {file.filename} uploaded successfully"}
+    except Exception as e:
+        logger.error(f"Failed to upload file: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Container, Form, Button, Alert, Spinner, Row, Col, Card } from 'react-bootstrap';
-import { FaPlus, FaTrash } from 'react-icons/fa';
-import { getIxpConfig, updateIxpConfig } from '../services/api';
+import React, { useEffect, useState, useRef } from 'react';
+import { Container, Form, Button, Alert, Spinner, Row, Col, Card, InputGroup } from 'react-bootstrap';
+import { FaPlus, FaTrash, FaUpload } from 'react-icons/fa';
+import { getIxpConfig, updateIxpConfig, listResourceFiles, uploadResourceFile } from '../services/api';
 
 export default function Config() {
     const [originalConfig, setOriginalConfig] = useState(null);
@@ -9,6 +9,8 @@ export default function Config() {
     const [saving, setSaving] = useState(false);
     const [alertMsg, setAlertMsg] = useState(null);
     const [alertType, setAlertType] = useState('info');
+    const [availableFiles, setAvailableFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
 
     // Form fields
     const [scenarioName, setScenarioName] = useState('');
@@ -21,10 +23,24 @@ export default function Config() {
     const [ribDumpFileV6, setRibDumpFileV6] = useState('');
     const [routeServers, setRouteServers] = useState([]);
     const [rpkiServers, setRpkiServers] = useState([]);
+    const fileInputRef = useRef(null);
+    const ribV4FileInputRef = useRef(null);
+    const ribV6FileInputRef = useRef(null);
+    const rsConfigFileInputRefs = useRef({});
 
     useEffect(() => {
         loadConfig();
+        loadAvailableFiles();
     }, []);
+
+    const loadAvailableFiles = async () => {
+        try {
+            const data = await listResourceFiles();
+            setAvailableFiles(data.files || []);
+        } catch (err) {
+            console.error('Failed to load available files', err);
+        }
+    };
 
     const loadConfig = async () => {
         setLoading(true);
@@ -106,6 +122,88 @@ export default function Config() {
         const updated = [...rpkiServers];
         updated[index][field] = value;
         setRpkiServers(updated);
+    };
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        setAlertMsg(null);
+        try {
+            const result = await uploadResourceFile(file);
+            setAlertMsg(result.message || `File ${file.name} uploaded successfully`);
+            setAlertType('success');
+            // Reload available files
+            await loadAvailableFiles();
+            // Reset file input
+            e.target.value = '';
+        } catch (err) {
+            console.error('Failed to upload file', err);
+            setAlertMsg(err.response?.data?.detail || 'Failed to upload file');
+            setAlertType('danger');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleRibV4Upload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            await uploadResourceFile(file);
+            setRibDumpFileV4(file.name);
+            await loadAvailableFiles();
+            setAlertMsg(`File ${file.name} uploaded successfully`);
+            setAlertType('success');
+        } catch (err) {
+            setAlertMsg(err.response?.data?.detail || 'Failed to upload file');
+            setAlertType('danger');
+        } finally {
+            setUploading(false);
+            ribV4FileInputRef.current.value = '';
+        }
+    };
+
+    const handleRibV6Upload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            await uploadResourceFile(file);
+            setRibDumpFileV6(file.name);
+            await loadAvailableFiles();
+            setAlertMsg(`File ${file.name} uploaded successfully`);
+            setAlertType('success');
+        } catch (err) {
+            setAlertMsg(err.response?.data?.detail || 'Failed to upload file');
+            setAlertType('danger');
+        } finally {
+            setUploading(false);
+            ribV6FileInputRef.current.value = '';
+        }
+    };
+
+    const handleRsConfigUpload = async (e, idx) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            await uploadResourceFile(file);
+            updateRouteServer(idx, 'config', file.name);
+            await loadAvailableFiles();
+            setAlertMsg(`File ${file.name} uploaded successfully`);
+            setAlertType('success');
+        } catch (err) {
+            setAlertMsg(err.response?.data?.detail || 'Failed to upload file');
+            setAlertType('danger');
+        } finally {
+            setUploading(false);
+            if (rsConfigFileInputRefs.current[idx]) {
+                rsConfigFileInputRefs.current[idx].value = '';
+            }
+        }
     };
 
     const handleSave = async () => {
@@ -222,7 +320,31 @@ export default function Config() {
                         <Card.Body>
                             <Form.Group className="mb-3">
                                 <Form.Label>Peering configuration path</Form.Label>
-                                <Form.Control value={peeringConfigPath} onChange={e => setPeeringConfigPath(e.target.value)} />
+                                <InputGroup>
+                                    <Form.Control
+                                        as="select"
+                                        value={peeringConfigPath}
+                                        onChange={e => setPeeringConfigPath(e.target.value)}
+                                    >
+                                        <option value="">-- Select file --</option>
+                                        {availableFiles.map(file => (
+                                            <option key={file} value={file}>{file}</option>
+                                        ))}
+                                    </Form.Control>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        style={{ display: 'none' }}
+                                        onChange={handleFileUpload}
+                                    />
+                                    <Button
+                                        variant="outline-primary"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploading}
+                                    >
+                                        <FaUpload />
+                                    </Button>
+                                </InputGroup>
                             </Form.Group>
                         </Card.Body>
                     </Card>
@@ -254,14 +376,62 @@ export default function Config() {
                                 <Col md={6}>
                                     <Form.Group className="mb-3">
                                         <Form.Label>RIB dump file (IPv4)</Form.Label>
-                                        <Form.Control value={ribDumpFileV4} onChange={e => setRibDumpFileV4(e.target.value)} />
+                                        <InputGroup>
+                                            <Form.Control
+                                                as="select"
+                                                value={ribDumpFileV4}
+                                                onChange={e => setRibDumpFileV4(e.target.value)}
+                                            >
+                                                <option value="">-- Select file --</option>
+                                                {availableFiles.map(file => (
+                                                    <option key={file} value={file}>{file}</option>
+                                                ))}
+                                            </Form.Control>
+                                            <input
+                                                ref={ribV4FileInputRef}
+                                                type="file"
+                                                style={{ display: 'none' }}
+                                                onChange={handleRibV4Upload}
+                                            />
+                                            <Button
+                                                variant="outline-primary"
+                                                onClick={() => ribV4FileInputRef.current?.click()}
+                                                disabled={uploading}
+                                            >
+                                                <FaUpload />
+                                            </Button>
+                                        </InputGroup>
                                     </Form.Group>
                                 </Col>
 
                                 <Col md={6}>
                                     <Form.Group className="mb-3">
                                         <Form.Label>RIB dump file (IPv6)</Form.Label>
-                                        <Form.Control value={ribDumpFileV6} onChange={e => setRibDumpFileV6(e.target.value)} />
+                                        <InputGroup>
+                                            <Form.Control
+                                                as="select"
+                                                value={ribDumpFileV6}
+                                                onChange={e => setRibDumpFileV6(e.target.value)}
+                                            >
+                                                <option value="">-- Select file --</option>
+                                                {availableFiles.map(file => (
+                                                    <option key={file} value={file}>{file}</option>
+                                                ))}
+                                            </Form.Control>
+                                            <input
+                                                ref={ribV6FileInputRef}
+                                                type="file"
+                                                style={{ display: 'none' }}
+                                                onChange={handleRibV6Upload}
+                                            />
+                                            <Button
+                                                variant="outline-primary"
+                                                onClick={() => ribV6FileInputRef.current?.click()}
+                                                disabled={uploading}
+                                            >
+                                                <FaUpload />
+                                            </Button>
+                                        </InputGroup>
                                     </Form.Group>
                                 </Col>
                             </Row>
@@ -338,11 +508,31 @@ export default function Config() {
 
                                                 <Form.Group className="mb-3">
                                                     <Form.Label>Config File/Path</Form.Label>
-                                                    <Form.Control
-                                                        value={rs.config}
-                                                        onChange={e => updateRouteServer(idx, 'config', e.target.value)}
-                                                        placeholder="e.g., bird.conf"
-                                                    />
+                                                    <InputGroup>
+                                                        <Form.Control
+                                                            as="select"
+                                                            value={rs.config}
+                                                            onChange={e => updateRouteServer(idx, 'config', e.target.value)}
+                                                        >
+                                                            <option value="">-- Select file --</option>
+                                                            {availableFiles.map(file => (
+                                                                <option key={file} value={file}>{file}</option>
+                                                            ))}
+                                                        </Form.Control>
+                                                        <input
+                                                            ref={el => rsConfigFileInputRefs.current[idx] = el}
+                                                            type="file"
+                                                            style={{ display: 'none' }}
+                                                            onChange={(e) => handleRsConfigUpload(e, idx)}
+                                                        />
+                                                        <Button
+                                                            variant="outline-primary"
+                                                            onClick={() => rsConfigFileInputRefs.current[idx]?.click()}
+                                                            disabled={uploading}
+                                                        >
+                                                            <FaUpload />
+                                                        </Button>
+                                                    </InputGroup>
                                                 </Form.Group>
 
                                                 <Form.Group className="mb-3">
