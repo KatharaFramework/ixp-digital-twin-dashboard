@@ -34,6 +34,16 @@ export const reloadDigitalTwin = async (rsOnly = false, maxDevices = null) => {
     return response.data;
 };
 
+export const getIxpConfig = async () => {
+    const response = await api.get('/config/ixp');
+    return response.data;
+};
+
+export const updateIxpConfig = async (config) => {
+    const response = await api.put('/config/ixp', config);
+    return response.data;
+};
+
 export const runQuarantineCheck = async (data) => {
     const response = await api.post('/quarantine/check', data);
     return response.data;

@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Optional
+import json
 
 from Kathara.setting.Setting import Setting
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -350,6 +351,36 @@ async def reload_digital_twin(request: ReloadDigitalTwinRequest):
     except Exception as e:
         logger.error(f"Failed to reload digital twin: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to reload digital twin: {str(e)}")
+
+
+@app.get("/config/ixp")
+async def get_ixp_config():
+    """Return the current ixp.conf as JSON."""
+    try:
+        if not os.path.exists(ixp_config_path):
+            raise HTTPException(status_code=404, detail="ixp.conf not found")
+        with open(ixp_config_path, 'r') as f:
+            data = json.load(f)
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to read ixp.conf: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to read ixp.conf: {str(e)}")
+
+
+@app.put("/config/ixp")
+async def update_ixp_config(config: dict):
+    """Overwrite ixp.conf with provided JSON body."""
+    try:
+        # Validate by serializing
+        serialized = json.dumps(config, indent=4)
+        with open(ixp_config_path, 'w') as f:
+            f.write(serialized)
+        return {"status": "success", "message": "ixp.conf updated"}
+    except Exception as e:
+        logger.error(f"Failed to write ixp.conf: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to write ixp.conf: {str(e)}")
 
 
 if __name__ == "__main__":
