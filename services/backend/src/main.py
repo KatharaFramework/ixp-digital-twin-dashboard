@@ -1,9 +1,10 @@
 import logging
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 import json
 
 from Kathara.setting.Setting import Setting
+from Kathara.manager.Kathara import Kathara
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -90,6 +91,11 @@ class ReloadDigitalTwinRequest(BaseModel):
 class ReloadDigitalTwinResponse(BaseModel):
     status: str
     message: str
+
+
+class MachineStatsResponse(BaseModel):
+    status: str
+    machines: Dict[str, Any] = Field(default_factory=dict, description="Machine statistics keyed by device name")
 
 
 # Helper Functions
@@ -244,6 +250,53 @@ async def stop_digital_twin():
     except Exception as e:
         logger.error(f"Failed to stop digital twin: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to stop digital twin: {str(e)}")
+
+
+@app.get("/machines/stats", response_model=MachineStatsResponse)
+async def get_machines_stats():
+    """Get statistics about running devices/machines"""
+    if not digital_twin_state["running"]:
+        raise HTTPException(status_code=400, detail="Digital twin is not running")
+
+    try:
+        logger.info("Fetching machines statistics...")
+        
+        # Get Kathara manager instance
+        manager = Kathara.get_instance()
+        
+        # Get network scenario from manager
+        net_scenario_manager = digital_twin_state["net_scenario_manager"]
+        if net_scenario_manager is None:
+            raise HTTPException(status_code=500, detail="Network scenario manager not initialized")
+        
+        lab = net_scenario_manager.get()
+        
+        # Get machines stats using the manager
+        machines_stats = {}
+        for stats_dict in manager.get_machines_stats(lab=lab):
+            # Each item from the generator is a dict with machine identifiers as keys
+            for machine_id, stats in stats_dict.items():
+                # Convert IMachineStats object to dictionary
+                machines_stats[machine_id] = {
+                    "status": stats.status,
+                    "image": stats.image,
+                    "cpu_usage": stats.cpu_usage,
+                    "memory_usage": stats.memory_usage,
+                    "pids": stats.pids,
+                    "name": stats.name,
+                }
+        
+        logger.info(f"Retrieved statistics for {len(machines_stats)} machines")
+        return MachineStatsResponse(
+            status="success",
+            machines=machines_stats
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get machines statistics: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get machines statistics: {str(e)}")
 
 
 @app.post("/reload", response_model=ReloadDigitalTwinResponse)
