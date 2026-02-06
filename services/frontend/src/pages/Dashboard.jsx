@@ -40,9 +40,7 @@ export default function Dashboard() {
         setAlertMessage(null);
         try {
             const response = await startDigitalTwin(maxDevices);
-            setAlertMessage(response.message);
-            setAlertType('info');
-            // Status will be updated by polling
+
         } catch (error) {
             console.error('Error starting digital twin:', error);
             setAlertMessage(error.response?.data?.detail || 'Failed to start digital twin');
@@ -57,8 +55,6 @@ export default function Dashboard() {
         setAlertMessage(null);
         try {
             const response = await stopDigitalTwin();
-            setAlertMessage(response.message);
-            setAlertType('success');
             await fetchStatus();
         } catch (error) {
             console.error('Error stopping digital twin:', error);
@@ -74,8 +70,6 @@ export default function Dashboard() {
         setAlertMessage(null);
         try {
             const response = await reloadDigitalTwin(rsOnly, maxDevices);
-            setAlertMessage(response.message || 'Reload triggered');
-            setAlertType('info');
             await fetchStatus();
         } catch (error) {
             console.error('Error reloading digital twin:', error);
@@ -121,14 +115,6 @@ export default function Dashboard() {
 
                     <MachinesStatsTable running={status.running} />
 
-                    <div className="mt-4 p-3 bg-light rounded">
-                        <h5>About</h5>
-                        <p className="text-muted mb-0">
-                            This dashboard allows you to manage the IXP Digital Twin network scenario.
-                            Start the digital twin to deploy the network devices, or stop it to clean up resources.
-                            You can optionally limit the number of devices for faster testing.
-                        </p>
-                    </div>
                 </Col>
             </Row>
         </Container>
