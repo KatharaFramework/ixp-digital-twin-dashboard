@@ -1,6 +1,6 @@
 """Pydantic models for API requests and responses."""
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 
 
@@ -69,4 +69,23 @@ class MachineExecResponse(BaseModel):
     machine_name: str
     command: str
     output: Optional[str] = None
+    error: Optional[str] = None
+
+class RibComparisonRequest(BaseModel):
+    """Request model for comparing RIB between route server and uploaded resource."""
+    route_server: str = Field(..., description="Name of the route server")
+    resource_file: str = Field(..., description="Name of the RIB dump file in resources")
+
+
+class RibComparisonResponse(BaseModel):
+    """Response model for RIB comparison."""
+    status: str
+    route_server: str
+    resource_file: str
+    live_rib_lines: int = Field(description="Number of routes in live RIB")
+    uploaded_rib_lines: int = Field(description="Number of routes in uploaded RIB")
+    only_in_live: List[str] = Field(default_factory=list, description="Routes only in live RIB")
+    only_in_uploaded: List[str] = Field(default_factory=list, description="Routes only in uploaded RIB")
+    differences_count: int = Field(description="Total number of differences")
+    message: Optional[str] = None
     error: Optional[str] = None

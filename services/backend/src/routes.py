@@ -10,10 +10,14 @@ from schemas import (
     StartDigitalTwinRequest, StartDigitalTwinResponse,
     DigitalTwinStatusResponse, ReloadDigitalTwinRequest,
     ReloadDigitalTwinResponse, MachineStatsResponse,
-    MachineExecRequest, MachineExecResponse
+    MachineExecRequest, MachineExecResponse, RibComparisonRequest,
+    RibComparisonResponse
 )
 from state import digital_twin_state
-from operations import start_digital_twin_async, stop_digital_twin, reload_digital_twin
+from operations import (
+    start_digital_twin_async, stop_digital_twin, reload_digital_twin,
+    compare_rib
+)
 
 logger = logging.getLogger(__name__)
 
@@ -236,3 +240,37 @@ def register_routes(app):
         except Exception as e:
             logger.error(f"Failed to upload file: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+    @app.post("/rib/compare", response_model=RibComparisonResponse)
+    async def compare_rib_endpoint(request: RibComparisonRequest):
+        """Compare RIB between route server and uploaded resource dump."""
+        if not digital_twin_state.is_running():
+            raise HTTPException(status_code=400, detail="Digital twin is not running")
+
+        try:
+            logger.info(f"Comparing RIB for route server '{request.route_server}' with file '{request.resource_file}'")
+
+            result = await compare_rib(request.route_server, request.resource_file)
+
+            return RibComparisonResponse(
+                status=result["status"],
+                route_server=result["route_server"],
+                resource_file=result["resource_file"],
+                live_rib_lines=result["live_rib_lines"],
+                uploaded_rib_lines=result["uploaded_rib_lines"],
+                only_in_live=result["only_in_live"],
+                only_in_uploaded=result["only_in_uploaded"],
+                differences_count=result["differences_count"],
+                message=result.get("message")
+            )
+
+        except HTTPException:
+            raise
+        except FileNotFoundError as e:
+            logger.error(f"Resource file not found: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=404, detail=f"Resource file not found: {str(e)}")
+        except ValueError as e:
+            logger.error(f"Invalid request parameters: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=400, detail=f"Invalid request parameters: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to compare RIB: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to compare RIB: {str(e)}")

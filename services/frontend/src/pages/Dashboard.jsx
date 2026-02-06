@@ -3,7 +3,8 @@ import { Container, Row, Col, Alert } from 'react-bootstrap';
 import StatusCard from '../components/StatusCard';
 import ControlPanel from '../components/ControlPanel';
 import MachinesStatsTable from '../components/MachinesStatsTable';
-import { getStatus, startDigitalTwin, stopDigitalTwin, reloadDigitalTwin } from '../services/api';
+import RibComparison from '../components/RibComparison';
+import { getStatus, startDigitalTwin, stopDigitalTwin, reloadDigitalTwin, getIxpConfig, listResourceFiles } from '../services/api';
 
 export default function Dashboard() {
     const [status, setStatus] = useState({
@@ -16,6 +17,9 @@ export default function Dashboard() {
     const [stopping, setStopping] = useState(false);
     const [alertMessage, setAlertMessage] = useState(null);
     const [alertType, setAlertType] = useState('info');
+    const [resourceFiles, setResourceFiles] = useState([]);
+    const [routeServers, setRouteServers] = useState([]);
+    const [minimizeRibComparison, setMinimizeRibComparison] = useState(false);
 
     const fetchStatus = async () => {
         try {
@@ -30,8 +34,34 @@ export default function Dashboard() {
         }
     };
 
+    const fetchResourceFiles = async () => {
+        try {
+            const data = await listResourceFiles();
+            setResourceFiles(data.files || []);
+        } catch (error) {
+            console.error('Error fetching resource files:', error);
+        }
+    };
+
+    const fetchRouteServers = async () => {
+        try {
+            const config = await getIxpConfig();
+            if (config.route_servers) {
+                const servers = Object.entries(config.route_servers).map(([name, data]) => ({
+                    name,
+                    type: data.type || 'unknown'
+                }));
+                setRouteServers(servers);
+            }
+        } catch (error) {
+            console.error('Error fetching route servers:', error);
+        }
+    };
+
     useEffect(() => {
         fetchStatus();
+        fetchResourceFiles();
+        fetchRouteServers();
         const interval = setInterval(fetchStatus, 3000); // Poll every 3 seconds
         return () => clearInterval(interval);
     }, []);
@@ -115,7 +145,17 @@ export default function Dashboard() {
                         stopping={stopping}
                     />
 
+                    <RibComparison 
+                        running={status.running} 
+                        resourceFiles={resourceFiles}
+                        routeServers={routeServers}
+                        minimized={minimizeRibComparison}
+                        onToggleMinimize={() => setMinimizeRibComparison(!minimizeRibComparison)}
+                    />
+                    
                     <MachinesStatsTable running={status.running} />
+
+                    
 
                 </Col>
             </Row>

@@ -78,4 +78,12 @@ export const executeMachineCommand = async (machineName, command) => {
     return response.data;
 };
 
+export const compareRib = async (routeServer, resourceFile) => {
+    const response = await api.post('/rib/compare', {
+        route_server: routeServer,
+        resource_file: resourceFile
+    });
+    return response.data;
+};
+
 export default api;

@@ -3,7 +3,10 @@
 import logging
 import os
 from typing import Optional
+import re
+import tempfile
 
+from Kathara.manager.Kathara import Kathara
 from Kathara.setting.Setting import Setting
 from digital_twin.ixp.colored_logging import set_logging
 from digital_twin.ixp.configuration.frr_scenario_configuration_applier import FrrScenarioConfigurationApplier
@@ -242,4 +245,134 @@ async def reload_digital_twin(rs_only: bool = False, max_devices: Optional[int] 
 
     except Exception as e:
         logger.error(f"Failed to reload digital twin: {str(e)}", exc_info=True)
+        raise
+
+
+def _extract_routes_from_entries(entries: dict) -> set:
+    """Extract all routes from member entries dump.
+    
+    Args:
+        entries: Dictionary of member entries with routers and routes
+        
+    Returns:
+        set: Set of all route prefixes
+    """
+    routes = set()
+    for neighbour in entries.values():
+        for router in neighbour.routers.values():
+            for route in router.routes[4]:
+                routes.add(str(route.network))
+            for route in router.routes[6]:
+                routes.add(str(route.network))
+    return routes
+
+
+async def compare_rib(route_server_name: str, resource_file: str) -> dict:
+    """Compare RIB between live route server and uploaded resource dump.
+    
+    Args:
+        route_server_name: Name of the route server device
+        resource_file: Name of the RIB dump file in resources directory
+        
+    Returns:
+        dict: Comparison results with live/uploaded routes and differences
+        
+    Raises:
+        Exception: If comparison fails
+    """
+    try:
+        logger.info(f"Comparing RIB for route server '{route_server_name}' with resource file '{resource_file}'")
+
+        # Get settings to find route server configuration
+        settings = Settings.get_instance()
+        if route_server_name not in settings.route_servers:
+            raise ValueError(f"Route server '{route_server_name}' not found in configuration")
+
+        rs_config = settings.route_servers[route_server_name]
+        rs_type = rs_config.get("type", "bird").lower()
+
+        # Get Kathara manager instance
+        manager = Kathara.get_instance()
+        net_scenario_manager = digital_twin_state.get_net_scenario_manager()
+        if net_scenario_manager is None:
+            raise Exception("Network scenario manager not initialized")
+
+        lab = net_scenario_manager.get()
+
+        # Execute appropriate command based on route server type
+        if rs_type == "bird":
+            command = "birdc show route all"
+        elif rs_type == "open_bgpd":
+            command = "bgpctl show rib"
+        else:
+            raise ValueError(f"Unsupported route server type: {rs_type}")
+
+        logger.info(f"Executing command on {route_server_name}: {command}")
+        output = manager.exec(machine_name=route_server_name, command=command, lab=lab, stream=False)
+        live_output = output[0] if output[0] else output[1]
+        live_output = live_output.decode('utf-8') if isinstance(live_output, bytes) else live_output
+        
+        # Write live_output to temporary file
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp_file:
+            tmp_file.write(live_output)
+            temp_file_path = tmp_file.name
+        logger.debug(f"Live output written to temporary file: {temp_file_path}")
+        logger.debug(f"Live output written to temporary file: {live_output}")
+
+        resource_path = os.path.join(RESOURCES_FOLDER, resource_file)
+        if not os.path.exists(resource_path):
+            raise FileNotFoundError(f"Resource file '{resource_file}' not found at {resource_path}")
+
+        logger.info(f"Loading uploaded RIB dump from {resource_file}")
+        member_dump_class = MemberDumpFactory(submodule_package="digital_twin").get_class_from_name(
+            settings.peering_configuration["type"]
+        )
+        entries = member_dump_class().load_from_file(
+            os.path.join(RESOURCES_FOLDER, settings.peering_configuration["path"])
+        )
+
+        # Create a table dump instance and load the uploaded file
+        table_dump_class = TableDumpFactory(submodule_package="digital_twin").get_class_from_name(
+            settings.rib_dumps["type"]
+        )
+        uploaded_dump = table_dump_class(entries)
+        uploaded_dump.load_from_file(resource_path)
+
+        live_entries = member_dump_class().load_from_file(
+            os.path.join(RESOURCES_FOLDER, settings.peering_configuration["path"])
+        )
+        
+        logger.info(f"Live entries loaded: {live_entries}")
+        live_dump = table_dump_class(live_entries)
+        live_dump.load_from_file(temp_file_path)
+
+        # Extract all routes from the uploaded dump
+        uploaded_routes = _extract_routes_from_entries(uploaded_dump.entries)
+        
+        live_routes = _extract_routes_from_entries(live_dump.entries)
+
+        # Compute differences
+        only_in_live = sorted(list(live_routes - uploaded_routes))
+        only_in_uploaded = sorted(list(uploaded_routes - live_routes))
+        total_differences = len(only_in_live) + len(only_in_uploaded)
+
+        logger.info(
+            f"RIB comparison complete: Live={len(live_routes)}, Uploaded={len(uploaded_routes)}, "
+            f"Differences={total_differences}"
+        )
+
+        return {
+            "status": "success",
+            "route_server": route_server_name,
+            "resource_file": resource_file,
+            "live_rib_lines": len(live_routes),
+            "uploaded_rib_lines": len(uploaded_routes),
+            "only_in_live": only_in_live,
+            "only_in_uploaded": only_in_uploaded,
+            "differences_count": total_differences,
+            "message": f"Found {total_differences} differences between live and uploaded RIB"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to compare RIB: {str(e)}", exc_info=True)
         raise
