@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
 import StatusCard from '../components/StatusCard';
 import ControlPanel from '../components/ControlPanel';
+import MachinesStatsTable from '../components/MachinesStatsTable';
 import { getStatus, startDigitalTwin, stopDigitalTwin, reloadDigitalTwin } from '../services/api';
 
 export default function Dashboard() {
@@ -117,6 +118,8 @@ export default function Dashboard() {
                         onReload={handleReload}
                         loading={loading}
                     />
+
+                    <MachinesStatsTable running={status.running} />
 
                     <div className="mt-4 p-3 bg-light rounded">
                         <h5>About</h5>

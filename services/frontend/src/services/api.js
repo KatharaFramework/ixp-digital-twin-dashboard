@@ -65,4 +65,9 @@ export const runQuarantineCheck = async (data) => {
     return response.data;
 };
 
+export const getMachinesStats = async () => {
+    const response = await api.get('/machines/stats');
+    return response.data;
+};
+
 export default api;

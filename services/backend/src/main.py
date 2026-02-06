@@ -271,20 +271,16 @@ async def get_machines_stats():
         
         lab = net_scenario_manager.get()
         
-        # Get machines stats using the manager
         machines_stats = {}
-        for stats_dict in manager.get_machines_stats(lab=lab):
-            # Each item from the generator is a dict with machine identifiers as keys
-            for machine_id, stats in stats_dict.items():
-                # Convert IMachineStats object to dictionary
-                machines_stats[machine_id] = {
-                    "status": stats.status,
-                    "image": stats.image,
-                    "cpu_usage": stats.cpu_usage,
-                    "memory_usage": stats.memory_usage,
-                    "pids": stats.pids,
-                    "name": stats.name,
-                }
+        for machine_id, stats in next(manager.get_machines_stats(lab=lab)).items():
+            machines_stats[machine_id] = {
+                "status": stats.status,
+                "image": stats.image,
+                "cpu_usage": stats.cpu_usage,
+                "memory_usage": stats.mem_usage,
+                "pids": stats.pids,
+                "name": stats.name,
+            }
         
         logger.info(f"Retrieved statistics for {len(machines_stats)} machines")
         return MachineStatsResponse(
