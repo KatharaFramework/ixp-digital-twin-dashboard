@@ -261,9 +261,9 @@ def _extract_routes_from_entries(entries: dict) -> set:
     for neighbour in entries.values():
         for router in neighbour.routers.values():
             for route in router.routes[4]:
-                routes.add(str(route.network))
+                routes.add(f"Network: {route.network} - AS Path: {route.as_path}")
             for route in router.routes[6]:
-                routes.add(str(route.network))
+                routes.add(f"Network: {route.network} - AS Path: {route.as_path}")
     return routes
 
 
