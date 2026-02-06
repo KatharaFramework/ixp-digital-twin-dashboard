@@ -44,7 +44,7 @@ const StatusCard = ({ running, starting, devicesCount, error }) => {
                         <div>
                             <div className="fw-bold">Digital Twin Running</div>
                             <div>
-                                {devicesCount && `${devicesCount} device${devicesCount !== 1 ? 's' : ''} deployed`}
+                                {devicesCount && `${devicesCount} customer${devicesCount !== 1 ? 's' : ''} deployed`}
                             </div>
                         </div>
                     </div>
