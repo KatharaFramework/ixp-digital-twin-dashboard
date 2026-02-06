@@ -13,6 +13,7 @@ export default function Dashboard() {
         error: null
     });
     const [loading, setLoading] = useState(false);
+    const [stopping, setStopping] = useState(false);
     const [alertMessage, setAlertMessage] = useState(null);
     const [alertType, setAlertType] = useState('info');
 
@@ -40,7 +41,7 @@ export default function Dashboard() {
         setAlertMessage(null);
         try {
             const response = await startDigitalTwin(maxDevices);
-
+            await fetchStatus();
         } catch (error) {
             console.error('Error starting digital twin:', error);
             setAlertMessage(error.response?.data?.detail || 'Failed to start digital twin');
@@ -51,7 +52,7 @@ export default function Dashboard() {
     };
 
     const handleStop = async () => {
-        setLoading(true);
+        setStopping(true);
         setAlertMessage(null);
         try {
             const response = await stopDigitalTwin();
@@ -61,7 +62,7 @@ export default function Dashboard() {
             setAlertMessage(error.response?.data?.detail || 'Failed to stop digital twin');
             setAlertType('danger');
         } finally {
-            setLoading(false);
+            setStopping(false);
         }
     };
 
@@ -81,7 +82,7 @@ export default function Dashboard() {
     };
 
     return (
-        <Container>
+        <Container fluid>
             <h1 className="text-center my-4">IXP Digital Twin Management</h1>
 
             {alertMessage && (
@@ -96,7 +97,7 @@ export default function Dashboard() {
             )}
 
             <Row className="justify-content-center">
-                <Col lg={10} xl={8}>
+                <Col>
                     <StatusCard
                         running={status.running}
                         starting={status.starting}
@@ -111,6 +112,7 @@ export default function Dashboard() {
                         onStop={handleStop}
                         onReload={handleReload}
                         loading={loading}
+                        stopping={stopping}
                     />
 
                     <MachinesStatsTable running={status.running} />

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, Button, Form, Row, Col, Spinner } from 'react-bootstrap';
 import { FaPlay, FaStop, FaRedo } from 'react-icons/fa';
 
-const ControlPanel = ({ running, starting, onStart, onStop, onReload, loading }) => {
+const ControlPanel = ({ running, starting, onStart, onStop, onReload, loading, stopping }) => {
     const [maxDevices, setMaxDevices] = useState('');
     const [rsOnly, setRsOnly] = useState(false);
 
@@ -17,33 +17,16 @@ const ControlPanel = ({ running, starting, onStart, onStop, onReload, loading })
             <Card.Body>
                 <Form>
                     <Row className="align-items-end">
-                        <Col md={8} className="mb-2 mb-md-0">
-                            <Form.Group className="mb-2">
-                                <Form.Label>Max Devices (optional)</Form.Label>
-                                <Form.Control
-                                    type="number"
-                                    placeholder="Leave empty for all devices"
-                                    value={maxDevices}
-                                    onChange={(e) => setMaxDevices(e.target.value)}
-                                    disabled={running || starting || loading}
-                                    min="1"
-                                />
-                                <Form.Text className="text-muted">
-                                    Limit the number of devices to start for faster deployment
-                                </Form.Text>
-                            </Form.Group>
-                        </Col>
-
-                        <Col md={4}>
+                        <Col>
                             <div className="d-grid gap-2">
                                 <div className="d-flex gap-2">
                                     <Button
                                         variant="success"
                                         onClick={handleStart}
-                                        disabled={running || starting || loading}
+                                        disabled={running || starting || loading || stopping}
                                         className="flex-fill"
                                     >
-                                        {loading ? (
+                                        {loading && !stopping ? (
                                             <>
                                                 <Spinner
                                                     as="span"
@@ -62,18 +45,45 @@ const ControlPanel = ({ running, starting, onStart, onStop, onReload, loading })
                                         )}
                                     </Button>
 
-                                    <Button
-                                        variant="danger"
-                                        onClick={onStop}
-                                        disabled={(!running && !starting) || loading}
-                                        className="flex-fill"
-                                    >
-                                        <FaStop className="me-2" />
-                                        Stop
-                                    </Button>
+                                    <Form.Group className="mb-0 flex-grow-1">
+                                        <Form.Control
+                                            type="number"
+                                            placeholder="Max Devices"
+                                            value={maxDevices}
+                                            onChange={(e) => setMaxDevices(e.target.value)}
+                                            disabled={running || starting || loading}
+                                            min="1"
+                                            title="Limit the number of devices to start for faster deployment"
+                                        />
+                                    </Form.Group>
                                 </div>
 
                                 <div className="d-flex gap-2 align-items-center">
+                                    <Button
+                                        variant="danger"
+                                        onClick={onStop}
+                                        disabled={(!running && !starting) || stopping}
+                                        className="flex-fill"
+                                    >
+                                        {stopping ? (
+                                            <>
+                                                <Spinner
+                                                    as="span"
+                                                    animation="border"
+                                                    size="sm"
+                                                    role="status"
+                                                    className="me-2"
+                                                />
+                                                Stopping...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FaStop className="me-2" />
+                                                Stop
+                                            </>
+                                        )}
+                                    </Button>
+
                                     <Button
                                         variant="primary"
                                         onClick={() => {
