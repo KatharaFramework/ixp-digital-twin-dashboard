@@ -70,4 +70,12 @@ export const getMachinesStats = async () => {
     return response.data;
 };
 
+export const executeMachineCommand = async (machineName, command) => {
+    const response = await api.post('/machines/exec', {
+        machine_name: machineName,
+        command: command
+    });
+    return response.data;
+};
+
 export default api;

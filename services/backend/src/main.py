@@ -98,6 +98,19 @@ class MachineStatsResponse(BaseModel):
     machines: Dict[str, Any] = Field(default_factory=dict, description="Machine statistics keyed by device name")
 
 
+class MachineExecRequest(BaseModel):
+    machine_name: str = Field(..., description="Name of the machine to execute command on")
+    command: str = Field(..., description="Command to execute on the machine")
+
+
+class MachineExecResponse(BaseModel):
+    status: str
+    machine_name: str
+    command: str
+    output: Optional[str] = None
+    error: Optional[str] = None
+
+
 # Helper Functions
 async def start_digital_twin_async(max_devices: Optional[int] = None):
     """Initialize and start the digital twin in background"""
@@ -293,6 +306,50 @@ async def get_machines_stats():
     except Exception as e:
         logger.error(f"Failed to get machines statistics: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get machines statistics: {str(e)}")
+
+
+@app.post("/machines/exec", response_model=MachineExecResponse)
+async def execute_machine_command(request: MachineExecRequest):
+    """Execute a command on a machine in the digital twin"""
+    if not digital_twin_state["running"]:
+        raise HTTPException(status_code=400, detail="Digital twin is not running")
+
+    try:
+        logger.info(f"Executing command on machine '{request.machine_name}': {request.command}")
+        
+        # Get Kathara manager instance
+        manager = Kathara.get_instance()
+        
+        # Get network scenario from manager
+        net_scenario_manager = digital_twin_state["net_scenario_manager"]
+        if net_scenario_manager is None:
+            raise HTTPException(status_code=500, detail="Network scenario manager not initialized")
+        
+        lab = net_scenario_manager.get()
+        
+        # Execute command on the machine
+        output = manager.exec(machine_name=request.machine_name, command=request.command, lab=lab, stream=False)
+        output = output[0] if output[0] else output[1]  
+        output = output.decode('utf-8').strip()
+
+        logger.info(f"Command executed successfully on machine '{request.machine_name}'")
+        return MachineExecResponse(
+            status="success",
+            machine_name=request.machine_name,
+            command=request.command,
+            output=output
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to execute command on machine: {str(e)}", exc_info=True)
+        return MachineExecResponse(
+            status="error",
+            machine_name=request.machine_name,
+            command=request.command,
+            error=str(e)
+        )
 
 
 @app.post("/reload", response_model=ReloadDigitalTwinResponse)
