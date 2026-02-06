@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Form, Button, Alert, Spinner, Table, Badge } from 'react-bootstrap';
 import { FaFlask, FaCheckCircle, FaExclamationTriangle, FaChevronDown, FaChevronUp, FaDownload } from 'react-icons/fa';
-import { compareRib, executeMachineCommand } from '../services/api';
+import { compareRib, executeMachineCommand, listRibDumps } from '../services/api';
 
 const RibComparison = ({ running, resourceFiles, routeServers, minimized, onToggleMinimize }) => {
     const [selectedRouteServer, setSelectedRouteServer] = useState('');
@@ -11,6 +11,25 @@ const RibComparison = ({ running, resourceFiles, routeServers, minimized, onTogg
     const [comparisonResult, setComparisonResult] = useState(null);
     const [errorMessage, setErrorMessage] = useState(null);
     const [showDetails, setShowDetails] = useState(false);
+    const [ribDumpFiles, setRibDumpFiles] = useState([]);
+
+    useEffect(() => {
+        // Fetch the list of valid RIB dump files from configuration
+        const fetchRibDumps = async () => {
+            try {
+                const data = await listRibDumps();
+                setRibDumpFiles(data.rib_dumps || []);
+            } catch (error) {
+                console.error('Error fetching RIB dumps:', error);
+                // Fallback: use empty list if API fails
+                setRibDumpFiles([]);
+            }
+        };
+
+        if (running) {
+            fetchRibDumps();
+        }
+    }, [running, resourceFiles]);
 
     const handleDownloadLiveRib = async () => {
         if (!selectedRouteServer) {
@@ -117,157 +136,157 @@ const RibComparison = ({ running, resourceFiles, routeServers, minimized, onTogg
                     )}
 
                     <Form className="mb-3">
-                    <Form.Group className="mb-3">
-                        <Form.Label>Route Server</Form.Label>
-                        <Form.Select
-                            value={selectedRouteServer}
-                            onChange={(e) => setSelectedRouteServer(e.target.value)}
-                            disabled={loading}
+                        <Form.Group className="mb-3">
+                            <Form.Label>Route Server</Form.Label>
+                            <Form.Select
+                                value={selectedRouteServer}
+                                onChange={(e) => setSelectedRouteServer(e.target.value)}
+                                disabled={loading}
+                            >
+                                <option value="">Select a route server...</option>
+                                {routeServers && routeServers.map((rs) => (
+                                    <option key={rs.name} value={rs.name}>
+                                        {rs.name} ({rs.type})
+                                    </option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Resource File</Form.Label>
+                            <Form.Select
+                                value={selectedResourceFile}
+                                onChange={(e) => setSelectedResourceFile(e.target.value)}
+                                disabled={loading}
+                            >
+                                <option value="">Select a dump file...</option>
+                                {ribDumpFiles && ribDumpFiles.map((file) => (
+                                    <option key={file} value={file}>
+                                        {file}
+                                    </option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Button
+                            variant="primary"
+                            onClick={handleCompare}
+                            disabled={loading || downloadingLiveRib || !selectedRouteServer || !selectedResourceFile}
+                            className="me-2"
                         >
-                            <option value="">Select a route server...</option>
-                            {routeServers && routeServers.map((rs) => (
-                                <option key={rs.name} value={rs.name}>
-                                    {rs.name} ({rs.type})
-                                </option>
-                            ))}
-                        </Form.Select>
-                    </Form.Group>
-
-                    <Form.Group className="mb-3">
-                        <Form.Label>Resource File</Form.Label>
-                        <Form.Select
-                            value={selectedResourceFile}
-                            onChange={(e) => setSelectedResourceFile(e.target.value)}
-                            disabled={loading}
-                        >
-                            <option value="">Select a dump file...</option>
-                            {resourceFiles && resourceFiles.map((file) => (
-                                <option key={file} value={file}>
-                                    {file}
-                                </option>
-                            ))}
-                        </Form.Select>
-                    </Form.Group>
-
-                    <Button
-                        variant="primary"
-                        onClick={handleCompare}
-                        disabled={loading || downloadingLiveRib || !selectedRouteServer || !selectedResourceFile}
-                        className="me-2"
-                    >
-                        {loading && <Spinner animation="border" size="sm" className="me-2" />}
-                        {loading ? 'Comparing...' : 'Compare RIB'}
-                    </Button>
-
-                    <Button
-                        variant="outline-secondary"
-                        onClick={handleDownloadLiveRib}
-                        disabled={downloadingLiveRib || loading || !selectedRouteServer}
-                    >
-                        {downloadingLiveRib && <Spinner animation="border" size="sm" className="me-2" />}
-                        <FaDownload className="me-1" />
-                        {downloadingLiveRib ? 'Downloading...' : 'Download Live RIB'}
-                    </Button>
-                </Form>
-
-                {comparisonResult && (
-                    <div>
-                        <div className="mb-3 p-3 bg-light rounded">
-                            <div className="row">
-                                <div className="col-md-4">
-                                    <div className="text-center">
-                                        <div className="text-muted small">Live RIB Routes</div>
-                                        <div className="fs-4 fw-bold">{comparisonResult.live_rib_lines}</div>
-                                    </div>
-                                </div>
-                                <div className="col-md-4">
-                                    <div className="text-center">
-                                        <div className="text-muted small">Uploaded RIB Routes</div>
-                                        <div className="fs-4 fw-bold">{comparisonResult.uploaded_rib_lines}</div>
-                                    </div>
-                                </div>
-                                <div className="col-md-4">
-                                    <div className="text-center">
-                                        <div className="text-muted small">Differences Found</div>
-                                        <div className={`fs-4 fw-bold ${comparisonResult.differences_count > 0 ? 'text-warning' : 'text-success'}`}>
-                                            {comparisonResult.differences_count}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {comparisonResult.differences_count > 0 ? (
-                            <Alert variant="warning" className="mb-3">
-                                <div className="d-flex align-items-start">
-                                    <FaExclamationTriangle className="me-2 mt-1 flex-shrink-0" />
-                                    <div>
-                                        <strong>RIB Differences Found</strong>
-                                        <div className="small">{comparisonResult.message}</div>
-                                    </div>
-                                </div>
-                            </Alert>
-                        ) : (
-                            <Alert variant="success" className="mb-3">
-                                <div className="d-flex align-items-start">
-                                    <FaCheckCircle className="me-2 mt-1 flex-shrink-0" />
-                                    <div>
-                                        <strong>RIB Match</strong>
-                                        <div className="small">Live and uploaded RIB are identical</div>
-                                    </div>
-                                </div>
-                            </Alert>
-                        )}
+                            {loading && <Spinner animation="border" size="sm" className="me-2" />}
+                            {loading ? 'Comparing...' : 'Compare RIB'}
+                        </Button>
 
                         <Button
                             variant="outline-secondary"
-                            size="sm"
-                            onClick={() => setShowDetails(!showDetails)}
-                            className="mb-3"
+                            onClick={handleDownloadLiveRib}
+                            disabled={downloadingLiveRib || loading || !selectedRouteServer}
                         >
-                            {showDetails ? 'Hide Details' : 'Show Details'}
+                            {downloadingLiveRib && <Spinner animation="border" size="sm" className="me-2" />}
+                            <FaDownload className="me-1" />
+                            {downloadingLiveRib ? 'Downloading...' : 'Download Live RIB'}
                         </Button>
+                    </Form>
 
-                        {showDetails && (
-                            <div>
-                                {comparisonResult.only_in_live && comparisonResult.only_in_live.length > 0 && (
-                                    <div className="mb-3">
-                                        <h6>Routes Only in Live RIB ({comparisonResult.only_in_live.length})</h6>
-                                        <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="border rounded p-2 bg-light">
-                                            <Table striped bordered size="sm" className="mb-0">
-                                                <tbody>
-                                                    {comparisonResult.only_in_live.map((route, idx) => (
-                                                        <tr key={idx}>
-                                                            <td><small><code>{route}</code></small></td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </Table>
+                    {comparisonResult && (
+                        <div>
+                            <div className="mb-3 p-3 bg-light rounded">
+                                <div className="row">
+                                    <div className="col-md-4">
+                                        <div className="text-center">
+                                            <div className="text-muted small">Live RIB Routes</div>
+                                            <div className="fs-4 fw-bold">{comparisonResult.live_rib_lines}</div>
                                         </div>
                                     </div>
-                                )}
-
-                                {comparisonResult.only_in_uploaded && comparisonResult.only_in_uploaded.length > 0 && (
-                                    <div className="mb-3">
-                                        <h6>Routes Only in Uploaded RIB ({comparisonResult.only_in_uploaded.length})</h6>
-                                        <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="border rounded p-2 bg-light">
-                                            <Table striped bordered size="sm" className="mb-0">
-                                                <tbody>
-                                                    {comparisonResult.only_in_uploaded.map((route, idx) => (
-                                                        <tr key={idx}>
-                                                            <td><small><code>{route}</code></small></td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </Table>
+                                    <div className="col-md-4">
+                                        <div className="text-center">
+                                            <div className="text-muted small">Uploaded RIB Routes</div>
+                                            <div className="fs-4 fw-bold">{comparisonResult.uploaded_rib_lines}</div>
                                         </div>
                                     </div>
-                                )}
+                                    <div className="col-md-4">
+                                        <div className="text-center">
+                                            <div className="text-muted small">Differences Found</div>
+                                            <div className={`fs-4 fw-bold ${comparisonResult.differences_count > 0 ? 'text-warning' : 'text-success'}`}>
+                                                {comparisonResult.differences_count}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        )}
-                    </div>
-                )}
-            </Card.Body>
+
+                            {comparisonResult.differences_count > 0 ? (
+                                <Alert variant="warning" className="mb-3">
+                                    <div className="d-flex align-items-start">
+                                        <FaExclamationTriangle className="me-2 mt-1 flex-shrink-0" />
+                                        <div>
+                                            <strong>RIB Differences Found</strong>
+                                            <div className="small">{comparisonResult.message}</div>
+                                        </div>
+                                    </div>
+                                </Alert>
+                            ) : (
+                                <Alert variant="success" className="mb-3">
+                                    <div className="d-flex align-items-start">
+                                        <FaCheckCircle className="me-2 mt-1 flex-shrink-0" />
+                                        <div>
+                                            <strong>RIB Match</strong>
+                                            <div className="small">Live and uploaded RIB are identical</div>
+                                        </div>
+                                    </div>
+                                </Alert>
+                            )}
+
+                            <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => setShowDetails(!showDetails)}
+                                className="mb-3"
+                            >
+                                {showDetails ? 'Hide Details' : 'Show Details'}
+                            </Button>
+
+                            {showDetails && (
+                                <div>
+                                    {comparisonResult.only_in_live && comparisonResult.only_in_live.length > 0 && (
+                                        <div className="mb-3">
+                                            <h6>Routes Only in Live RIB ({comparisonResult.only_in_live.length})</h6>
+                                            <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="border rounded p-2 bg-light">
+                                                <Table striped bordered size="sm" className="mb-0">
+                                                    <tbody>
+                                                        {comparisonResult.only_in_live.map((route, idx) => (
+                                                            <tr key={idx}>
+                                                                <td><small><code>{route}</code></small></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </Table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {comparisonResult.only_in_uploaded && comparisonResult.only_in_uploaded.length > 0 && (
+                                        <div className="mb-3">
+                                            <h6>Routes Only in Uploaded RIB ({comparisonResult.only_in_uploaded.length})</h6>
+                                            <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="border rounded p-2 bg-light">
+                                                <Table striped bordered size="sm" className="mb-0">
+                                                    <tbody>
+                                                        {comparisonResult.only_in_uploaded.map((route, idx) => (
+                                                            <tr key={idx}>
+                                                                <td><small><code>{route}</code></small></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </Table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </Card.Body>
             )}
         </Card>
     );

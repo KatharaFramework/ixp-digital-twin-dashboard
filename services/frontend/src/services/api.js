@@ -49,6 +49,11 @@ export const listResourceFiles = async () => {
     return response.data;
 };
 
+export const listRibDumps = async () => {
+    const response = await api.get('/resources/rib-dumps');
+    return response.data;
+};
+
 export const uploadResourceFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
