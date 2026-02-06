@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Alert, Spinner, Button, Modal, Form } from 'react-bootstrap';
-import { FaTerminal } from 'react-icons/fa';
+import { FaTerminal, FaPause, FaPlay } from 'react-icons/fa';
 import { getMachinesStats, executeMachineCommand } from '../services/api';
 
 export default function MachinesStatsTable({ running }) {
@@ -13,6 +13,7 @@ export default function MachinesStatsTable({ running }) {
     const [execLoading, setExecLoading] = useState(false);
     const [execOutput, setExecOutput] = useState(null);
     const [execError, setExecError] = useState(null);
+    const [isPolling, setIsPolling] = useState(true);
 
     const fetchMachinesStats = async () => {
         if (!running) return;
@@ -32,9 +33,13 @@ export default function MachinesStatsTable({ running }) {
 
     useEffect(() => {
         fetchMachinesStats();
-        const interval = setInterval(fetchMachinesStats, 5000); // Poll every 5 seconds
+        const interval = setInterval(() => {
+            if (isPolling) {
+                fetchMachinesStats();
+            }
+        }, 5000); // Poll every 5 seconds
         return () => clearInterval(interval);
-    }, [running]);
+    }, [running, isPolling]);
 
     const handleOpenExecModal = (machineName) => {
         setSelectedMachine(machineName);
@@ -116,7 +121,27 @@ export default function MachinesStatsTable({ running }) {
 
     return (
         <div className="mt-4">
-            <h5>Machines Statistics</h5>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5>Machines Statistics</h5>
+                <Button
+                    variant={isPolling ? "warning" : "success"}
+                    size="sm"
+                    onClick={() => setIsPolling(!isPolling)}
+                    title={isPolling ? "Stop polling" : "Start polling"}
+                >
+                    {isPolling ? (
+                        <>
+                            <FaPause className="me-2" />
+                            Stop Polling
+                        </>
+                    ) : (
+                        <>
+                            <FaPlay className="me-2" />
+                            Start Polling
+                        </>
+                    )}
+                </Button>
+            </div>
             <div className="table-responsive">
                 <Table striped bordered hover>
                     <thead>
@@ -163,14 +188,6 @@ export default function MachinesStatsTable({ running }) {
                     </tbody>
                 </Table>
             </div>
-            {loading && (
-                <div className="text-center mt-2">
-                    <small className="text-muted">
-                        <Spinner animation="border" size="sm" className="me-2" />
-                        Updating...
-                    </small>
-                </div>
-            )}
 
             {/* Command Execution Modal */}
             <Modal show={showExecModal} onHide={handleCloseExecModal} size="lg">
