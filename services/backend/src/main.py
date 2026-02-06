@@ -272,7 +272,7 @@ async def get_machines_stats():
         raise HTTPException(status_code=400, detail="Digital twin is not running")
 
     try:
-        logger.info("Fetching machines statistics...")
+        logger.debug("Fetching machines statistics...")
         
         # Get Kathara manager instance
         manager = Kathara.get_instance()
@@ -295,7 +295,7 @@ async def get_machines_stats():
                 "name": stats.name,
             }
         
-        logger.info(f"Retrieved statistics for {len(machines_stats)} machines")
+        logger.debug(f"Retrieved statistics for {len(machines_stats)} machines")
         return MachineStatsResponse(
             status="success",
             machines=machines_stats
