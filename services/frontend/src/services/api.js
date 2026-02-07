@@ -65,6 +65,25 @@ export const uploadResourceFile = async (file) => {
     return response.data;
 };
 
+export const uploadResourceDirectory = async (files) => {
+    const formData = new FormData();
+    let dirName = '';
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const relativePath = file.webkitRelativePath || file.name;
+        if (i === 0) {
+            dirName = relativePath.split('/')[0];
+        }
+        formData.append('files', file, relativePath);
+    }
+    const response = await api.post('/resources/upload-directory', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return { ...response.data, dirName };
+};
+
 export const runQuarantineCheck = async (data) => {
     const response = await api.post('/quarantine/check', data);
     return response.data;

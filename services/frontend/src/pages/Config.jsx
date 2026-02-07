@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Container, Form, Button, Alert, Spinner, Row, Col, Card, InputGroup } from 'react-bootstrap';
 import { FaPlus, FaTrash, FaUpload } from 'react-icons/fa';
-import { getIxpConfig, updateIxpConfig, listResourceFiles, uploadResourceFile } from '../services/api';
+import { getIxpConfig, updateIxpConfig, listResourceFiles, uploadResourceFile, uploadResourceDirectory } from '../services/api';
 
 export default function Config() {
     const [originalConfig, setOriginalConfig] = useState(null);
@@ -186,17 +186,17 @@ export default function Config() {
     };
 
     const handleRsConfigUpload = async (e, idx) => {
-        const file = e.target.files[0];
-        if (!file) return;
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
         setUploading(true);
         try {
-            await uploadResourceFile(file);
-            updateRouteServer(idx, 'config', file.name);
+            const result = await uploadResourceDirectory(files);
+            updateRouteServer(idx, 'config', result.dirName);
             await loadAvailableFiles();
-            setAlertMsg(`File ${file.name} uploaded successfully`);
+            setAlertMsg(`Directory ${result.dirName} uploaded successfully`);
             setAlertType('success');
         } catch (err) {
-            setAlertMsg(err.response?.data?.detail || 'Failed to upload file');
+            setAlertMsg(err.response?.data?.detail || 'Failed to upload directory');
             setAlertType('danger');
         } finally {
             setUploading(false);
@@ -280,7 +280,7 @@ export default function Config() {
                 <Form>
                     {/* Basic Settings Section */}
                     <Card className="mb-4 shadow-sm">
-                        <Card.Header className="bg-primary text-white">
+                        <Card.Header>
                             <h5 className="mb-0">Basic Settings</h5>
                         </Card.Header>
                         <Card.Body>
@@ -314,7 +314,7 @@ export default function Config() {
 
                     {/* Peering Configuration Section */}
                     <Card className="mb-4 shadow-sm">
-                        <Card.Header className="bg-info text-white">
+                        <Card.Header>
                             <h5 className="mb-0">Peering Configuration</h5>
                         </Card.Header>
                         <Card.Body>
@@ -328,7 +328,9 @@ export default function Config() {
                                     >
                                         <option value="">-- Select file --</option>
                                         {availableFiles.map(file => (
-                                            <option key={file} value={file}>{file}</option>
+                                            <option key={file.name} value={file.name}>
+                                                {file.type === 'directory' ? '📁' : '📄'} {file.name}
+                                            </option>
                                         ))}
                                     </Form.Control>
                                     <input
@@ -351,7 +353,7 @@ export default function Config() {
 
                     {/* RIB Dumps Section */}
                     <Card className="mb-4 shadow-sm">
-                        <Card.Header className="bg-success text-white">
+                        <Card.Header>
                             <h5 className="mb-0">RIB Dumps</h5>
                         </Card.Header>
                         <Card.Body>
@@ -384,7 +386,9 @@ export default function Config() {
                                             >
                                                 <option value="">-- Select file --</option>
                                                 {availableFiles.map(file => (
-                                                    <option key={file} value={file}>{file}</option>
+                                                    <option key={file.name} value={file.name}>
+                                                        {file.type === 'directory' ? '📁' : '📄'} {file.name}
+                                                    </option>
                                                 ))}
                                             </Form.Control>
                                             <input
@@ -415,7 +419,9 @@ export default function Config() {
                                             >
                                                 <option value="">-- Select file --</option>
                                                 {availableFiles.map(file => (
-                                                    <option key={file} value={file}>{file}</option>
+                                                    <option key={file.name} value={file.name}>
+                                                        {file.type === 'directory' ? '📁' : '📄'} {file.name}
+                                                    </option>
                                                 ))}
                                             </Form.Control>
                                             <input
@@ -440,7 +446,7 @@ export default function Config() {
 
                     {/* Route Servers Section */}
                     <Card className="mb-4 shadow-sm">
-                        <Card.Header className="bg-warning text-dark">
+                        <Card.Header>
                             <h5 className="mb-0">Route Servers</h5>
                         </Card.Header>
                         <Card.Body>
@@ -507,21 +513,25 @@ export default function Config() {
                                                 </Form.Group>
 
                                                 <Form.Group className="mb-3">
-                                                    <Form.Label>Config File/Path</Form.Label>
+                                                    <Form.Label>Config File/Directory</Form.Label>
                                                     <InputGroup>
                                                         <Form.Control
                                                             as="select"
                                                             value={rs.config}
                                                             onChange={e => updateRouteServer(idx, 'config', e.target.value)}
                                                         >
-                                                            <option value="">-- Select file --</option>
+                                                            <option value="">-- Select file/directory --</option>
                                                             {availableFiles.map(file => (
-                                                                <option key={file} value={file}>{file}</option>
+                                                                <option key={file.name} value={file.name}>
+                                                                    {file.type === 'directory' ? '📁' : '📄'} {file.name}
+                                                                </option>
                                                             ))}
                                                         </Form.Control>
                                                         <input
                                                             ref={el => rsConfigFileInputRefs.current[idx] = el}
                                                             type="file"
+                                                            webkitdirectory="true"
+                                                            mozbkitdirectory="true"
                                                             style={{ display: 'none' }}
                                                             onChange={(e) => handleRsConfigUpload(e, idx)}
                                                         />
@@ -558,7 +568,7 @@ export default function Config() {
 
                     {/* RPKI Servers Section */}
                     <Card className="mb-4 shadow-sm">
-                        <Card.Header className="bg-danger text-white">
+                        <Card.Header>
                             <h5 className="mb-0">RPKI Servers</h5>
                         </Card.Header>
                         <Card.Body>
