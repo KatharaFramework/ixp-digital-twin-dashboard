@@ -327,9 +327,9 @@ export default function Config() {
                                         onChange={e => setPeeringConfigPath(e.target.value)}
                                     >
                                         <option value="">-- Select file --</option>
-                                        {availableFiles.map(file => (
+                                        {availableFiles.filter(file => file.type === 'file' && file.name.endsWith('.json')).map(file => (
                                             <option key={file.name} value={file.name}>
-                                                {file.type === 'directory' ? '📁' : '📄'} {file.name}
+                                                📄 {file.name}
                                             </option>
                                         ))}
                                     </Form.Control>
@@ -385,9 +385,9 @@ export default function Config() {
                                                 onChange={e => setRibDumpFileV4(e.target.value)}
                                             >
                                                 <option value="">-- Select file --</option>
-                                                {availableFiles.map(file => (
+                                                {availableFiles.filter(file => file.type === 'file').map(file => (
                                                     <option key={file.name} value={file.name}>
-                                                        {file.type === 'directory' ? '📁' : '📄'} {file.name}
+                                                        📄 {file.name}
                                                     </option>
                                                 ))}
                                             </Form.Control>
@@ -418,9 +418,9 @@ export default function Config() {
                                                 onChange={e => setRibDumpFileV6(e.target.value)}
                                             >
                                                 <option value="">-- Select file --</option>
-                                                {availableFiles.map(file => (
+                                                {availableFiles.filter(file => file.type === 'file').map(file => (
                                                     <option key={file.name} value={file.name}>
-                                                        {file.type === 'directory' ? '📁' : '📄'} {file.name}
+                                                        📄 {file.name}
                                                     </option>
                                                 ))}
                                             </Form.Control>
