@@ -342,7 +342,7 @@ async def compare_rib(route_server_name: str, resource_file: str) -> dict:
             os.path.join(RESOURCES_FOLDER, settings.peering_configuration["path"])
         )
         
-        logger.info(f"Live entries loaded: {live_entries}")
+        logger.debug(f"Live entries loaded: {live_entries}")
         live_dump = table_dump_class(live_entries)
         live_dump.load_from_file(temp_file_path)
 
