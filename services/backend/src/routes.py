@@ -213,12 +213,10 @@ def register_routes(app):
         """Return the current ixp.conf as JSON."""
         try:
             if not os.path.exists(ixp_config_path):
-                raise HTTPException(status_code=404, detail="ixp.conf not found")
+                return {}
             with open(ixp_config_path, "r") as f:
                 data = json.load(f)
             return data
-        except HTTPException:
-            raise
         except Exception as e:
             logger.error(f"Failed to read ixp.conf: {str(e)}", exc_info=True)
             raise HTTPException(

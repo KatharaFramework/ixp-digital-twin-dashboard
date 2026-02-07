@@ -47,20 +47,23 @@ export default function Dashboard() {
     const fetchIxpConfig = async () => {
         try {
             const config = await getIxpConfig();
-            if (config.route_servers) {
-                const servers = Object.entries(config.route_servers).map(([name, data]) => ({
-                    name,
-                    type: data.type || 'unknown'
-                }));
-                setRouteServers(servers);
+            // Check if config is empty (file not present)
+            if (Object.keys(config).length === 0) {
+                setConfigMissing(true);
+                setRouteServers([]);
+            } else {
+                if (config.route_servers) {
+                    const servers = Object.entries(config.route_servers).map(([name, data]) => ({
+                        name,
+                        type: data.type || 'unknown'
+                    }));
+                    setRouteServers(servers);
+                }
+                setConfigMissing(false);
             }
-            setConfigMissing(false);
         } catch (error) {
             console.error('Error fetching route servers:', error);
-            // Check if config is missing (404 error)
-            if (error.response?.status === 404) {
-                setConfigMissing(true);
-            }
+            setConfigMissing(true);
         }
     };
 

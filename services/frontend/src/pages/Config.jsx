@@ -17,12 +17,21 @@ export default function Config() {
     const [hostInterface, setHostInterface] = useState('');
     const [peeringLan4, setPeeringLan4] = useState('');
     const [peeringLan6, setPeeringLan6] = useState('');
+    const [peeringConfigType, setPeeringConfigType] = useState('');
     const [peeringConfigPath, setPeeringConfigPath] = useState('');
     const [ribDumpsType, setRibDumpsType] = useState('');
     const [ribDumpFileV4, setRibDumpFileV4] = useState('');
     const [ribDumpFileV6, setRibDumpFileV6] = useState('');
     const [routeServers, setRouteServers] = useState([]);
     const [rpkiServers, setRpkiServers] = useState([]);
+    const [quarantineActions, setQuarantineActions] = useState([]);
+    const [proxyArpIps, setProxyArpIps] = useState([]);
+    const [maxRibPrefixesV4, setMaxRibPrefixesV4] = useState('');
+    const [maxRibPrefixesV6, setMaxRibPrefixesV6] = useState('');
+    const [trafficDumpMins, setTrafficDumpMins] = useState('');
+    const [probeIpV4, setProbeIpV4] = useState('');
+    const [probeIpV6, setProbeIpV6] = useState('');
+    const [dnsName, setDnsName] = useState('');
     const fileInputRef = useRef(null);
     const ribV4FileInputRef = useRef(null);
     const ribV6FileInputRef = useRef(null);
@@ -53,6 +62,7 @@ export default function Config() {
             setHostInterface(data.host_interface || '');
             setPeeringLan4((data.peering_lan && data.peering_lan['4']) || '');
             setPeeringLan6((data.peering_lan && data.peering_lan['6']) || '');
+            setPeeringConfigType((data.peering_configuration && data.peering_configuration.type) || '');
             setPeeringConfigPath((data.peering_configuration && data.peering_configuration.path) || '');
             setRibDumpsType((data.rib_dumps && data.rib_dumps.type) || '');
             setRibDumpFileV4((data.rib_dumps && data.rib_dumps.dumps && data.rib_dumps.dumps['4']) || '');
@@ -87,6 +97,18 @@ export default function Config() {
                 });
             }
             setRpkiServers(rpkiArray);
+
+            // Load quarantine settings
+            if (data.quarantine) {
+                setQuarantineActions(data.quarantine.actions || []);
+                setProxyArpIps(data.quarantine.proxy_arp_ips || []);
+                setMaxRibPrefixesV4((data.quarantine.max_rib_prefixes && data.quarantine.max_rib_prefixes['4']) || '');
+                setMaxRibPrefixesV6((data.quarantine.max_rib_prefixes && data.quarantine.max_rib_prefixes['6']) || '');
+                setTrafficDumpMins(data.quarantine.traffic_dump_mins || '');
+                setProbeIpV4((data.quarantine.probe_ips && data.quarantine.probe_ips['4']) || '');
+                setProbeIpV6((data.quarantine.probe_ips && data.quarantine.probe_ips['6']) || '');
+                setDnsName(data.quarantine.dns_name || '');
+            }
         } catch (err) {
             console.error('Failed to load ixp.conf', err);
             setAlertMsg(err.response?.data?.detail || 'Failed to load configuration');
@@ -219,12 +241,17 @@ export default function Config() {
             updated.peering_lan['4'] = peeringLan4;
             updated.peering_lan['6'] = peeringLan6;
             updated.peering_configuration = updated.peering_configuration || {};
+            updated.peering_configuration.type = peeringConfigType;
             updated.peering_configuration.path = peeringConfigPath;
             updated.rib_dumps = updated.rib_dumps || { dumps: {} };
             updated.rib_dumps.type = ribDumpsType;
-            updated.rib_dumps.dumps = updated.rib_dumps.dumps || {};
-            updated.rib_dumps.dumps['4'] = ribDumpFileV4;
-            updated.rib_dumps.dumps['6'] = ribDumpFileV6;
+            updated.rib_dumps.dumps = {};
+            if (ribDumpFileV4) {
+                updated.rib_dumps.dumps['4'] = ribDumpFileV4;
+            }
+            if (ribDumpFileV6) {
+                updated.rib_dumps.dumps['6'] = ribDumpFileV6;
+            }
 
             // Rebuild route_servers from array
             updated.route_servers = {};
@@ -247,6 +274,22 @@ export default function Config() {
                 port: rpki.port ? parseInt(rpki.port) : rpki.port,
                 protocol: rpki.protocol
             }));
+
+            // Update quarantine settings
+            updated.quarantine = {
+                actions: quarantineActions,
+                proxy_arp_ips: proxyArpIps,
+                max_rib_prefixes: {
+                    '4': maxRibPrefixesV4 ? parseInt(maxRibPrefixesV4) : '',
+                    '6': maxRibPrefixesV6 ? parseInt(maxRibPrefixesV6) : ''
+                },
+                traffic_dump_mins: trafficDumpMins ? parseInt(trafficDumpMins) : '',
+                probe_ips: {
+                    '4': probeIpV4,
+                    '6': probeIpV6
+                },
+                dns_name: dnsName
+            };
 
             const resp = await updateIxpConfig(updated);
             setAlertMsg(resp.message || 'Configuration updated');
@@ -318,6 +361,19 @@ export default function Config() {
                             <h5 className="mb-0">Peering Configuration</h5>
                         </Card.Header>
                         <Card.Body>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Peering configuration type</Form.Label>
+                                <Form.Control
+                                    as="select"
+                                    value={peeringConfigType}
+                                    onChange={e => setPeeringConfigType(e.target.value)}
+                                >
+                                    <option value="">-- Select Type --</option>
+                                    <option value="raw_json">raw_json</option>
+                                    <option value="ixp_manager">ixp_manager</option>
+                                </Form.Control>
+                            </Form.Group>
+
                             <Form.Group className="mb-3">
                                 <Form.Label>Peering configuration path</Form.Label>
                                 <InputGroup>
@@ -643,6 +699,213 @@ export default function Config() {
                             <FaPlus className="me-2" />
                             Add RPKI Server
                         </Button>
+                        </Card.Body>
+                    </Card>
+
+                    {/* Quarantine Section */}
+                    <Card className="mb-4 shadow-sm">
+                        <Card.Header>
+                            <h5 className="mb-0">Quarantine Configuration</h5>
+                        </Card.Header>
+                        <Card.Body>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Quarantine Actions</Form.Label>
+                                <div className="ms-3">
+                                    <Form.Check
+                                        type="checkbox"
+                                        id="action-ping"
+                                        label="connectivity.CheckPingAction"
+                                        checked={quarantineActions.includes('connectivity.CheckPingAction')}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setQuarantineActions([...quarantineActions, 'connectivity.CheckPingAction']);
+                                            } else {
+                                                setQuarantineActions(quarantineActions.filter(a => a !== 'connectivity.CheckPingAction'));
+                                            }
+                                        }}
+                                    />
+                                    <Form.Check
+                                        type="checkbox"
+                                        id="action-ping-mtu"
+                                        label="connectivity.CheckPingMtuAction"
+                                        checked={quarantineActions.includes('connectivity.CheckPingMtuAction')}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setQuarantineActions([...quarantineActions, 'connectivity.CheckPingMtuAction']);
+                                            } else {
+                                                setQuarantineActions(quarantineActions.filter(a => a !== 'connectivity.CheckPingMtuAction'));
+                                            }
+                                        }}
+                                    />
+                                    <Form.Check
+                                        type="checkbox"
+                                        id="action-proxy-arp"
+                                        label="connectivity.CheckProxyArpAction"
+                                        checked={quarantineActions.includes('connectivity.CheckProxyArpAction')}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setQuarantineActions([...quarantineActions, 'connectivity.CheckProxyArpAction']);
+                                            } else {
+                                                setQuarantineActions(quarantineActions.filter(a => a !== 'connectivity.CheckProxyArpAction'));
+                                            }
+                                        }}
+                                    />
+                                    <Form.Check
+                                        type="checkbox"
+                                        id="action-bgp-session"
+                                        label="bgp.CheckBgpSessionAction"
+                                        checked={quarantineActions.includes('bgp.CheckBgpSessionAction')}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setQuarantineActions([...quarantineActions, 'bgp.CheckBgpSessionAction']);
+                                            } else {
+                                                setQuarantineActions(quarantineActions.filter(a => a !== 'bgp.CheckBgpSessionAction'));
+                                            }
+                                        }}
+                                    />
+                                    <Form.Check
+                                        type="checkbox"
+                                        id="action-bgp-rib"
+                                        label="bgp.CheckBgpRibAction"
+                                        checked={quarantineActions.includes('bgp.CheckBgpRibAction')}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setQuarantineActions([...quarantineActions, 'bgp.CheckBgpRibAction']);
+                                            } else {
+                                                setQuarantineActions(quarantineActions.filter(a => a !== 'bgp.CheckBgpRibAction'));
+                                            }
+                                        }}
+                                    />
+                                    <Form.Check
+                                        type="checkbox"
+                                        id="action-services"
+                                        label="security.CheckServicesAction"
+                                        checked={quarantineActions.includes('security.CheckServicesAction')}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setQuarantineActions([...quarantineActions, 'security.CheckServicesAction']);
+                                            } else {
+                                                setQuarantineActions(quarantineActions.filter(a => a !== 'security.CheckServicesAction'));
+                                            }
+                                        }}
+                                    />
+                                    <Form.Check
+                                        type="checkbox"
+                                        id="action-traffic"
+                                        label="security.CheckTrafficAction"
+                                        checked={quarantineActions.includes('security.CheckTrafficAction')}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setQuarantineActions([...quarantineActions, 'security.CheckTrafficAction']);
+                                            } else {
+                                                setQuarantineActions(quarantineActions.filter(a => a !== 'security.CheckTrafficAction'));
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </Form.Group>
+
+                            <Row>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label>Max RIB Prefixes (IPv4)</Form.Label>
+                                        <Form.Control
+                                            type="number"
+                                            value={maxRibPrefixesV4}
+                                            onChange={e => setMaxRibPrefixesV4(e.target.value)}
+                                            placeholder="e.g., 5000"
+                                        />
+                                    </Form.Group>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label>Max RIB Prefixes (IPv6)</Form.Label>
+                                        <Form.Control
+                                            type="number"
+                                            value={maxRibPrefixesV6}
+                                            onChange={e => setMaxRibPrefixesV6(e.target.value)}
+                                            placeholder="e.g., 5000"
+                                        />
+                                    </Form.Group>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label>Traffic Dump Duration (minutes)</Form.Label>
+                                        <Form.Control
+                                            type="number"
+                                            value={trafficDumpMins}
+                                            onChange={e => setTrafficDumpMins(e.target.value)}
+                                            placeholder="e.g., 1"
+                                        />
+                                    </Form.Group>
+                                </Col>
+
+                                <Col md={6}>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label>Probe IP (IPv4)</Form.Label>
+                                        <Form.Control
+                                            value={probeIpV4}
+                                            onChange={e => setProbeIpV4(e.target.value)}
+                                        />
+                                    </Form.Group>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label>Probe IP (IPv6)</Form.Label>
+                                        <Form.Control
+                                            value={probeIpV6}
+                                            onChange={e => setProbeIpV6(e.target.value)}
+                                        />
+                                    </Form.Group>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label>DNS Name</Form.Label>
+                                        <Form.Control
+                                            value={dnsName}
+                                            onChange={e => setDnsName(e.target.value)}
+                                            placeholder="e.g., kathara.org"
+                                        />
+                                    </Form.Group>
+                                </Col>
+                            </Row>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Proxy ARP IPs</Form.Label>
+                                <div className="mb-2">
+                                    {proxyArpIps.length === 0 ? (
+                                        <p className="text-muted">No proxy ARP IPs configured</p>
+                                    ) : (
+                                        proxyArpIps.map((ip, idx) => (
+                                            <div key={idx} className="d-flex align-items-center mb-2">
+                                                <Form.Control
+                                                    value={ip}
+                                                    onChange={(e) => {
+                                                        const updated = [...proxyArpIps];
+                                                        updated[idx] = e.target.value;
+                                                        setProxyArpIps(updated);
+                                                    }}
+                                                    className="me-2"
+                                                    style={{ maxWidth: '50%' }}
+                                                />
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setProxyArpIps(proxyArpIps.filter((_, i) => i !== idx));
+                                                    }}
+                                                >
+                                                    <FaTrash />
+                                                </Button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                <Button
+                                    variant="outline-success"
+                                    size="sm"
+                                    onClick={() => setProxyArpIps([...proxyArpIps, ''])}
+                                >
+                                    <FaPlus className="me-2" />
+                                    Add IP
+                                </Button>
+                            </Form.Group>
                         </Card.Body>
                     </Card>
 
