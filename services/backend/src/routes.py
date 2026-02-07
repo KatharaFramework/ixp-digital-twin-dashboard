@@ -242,18 +242,22 @@ def register_routes(app):
 
     @app.get("/resources/files")
     async def list_resource_files():
-        """List all files in the resources directory."""
+        """List all files and directories in the resources directory with type information."""
         try:
             if not os.path.exists(ixp_resource_path):
                 return {"files": []}
 
             files = []
-            for filename in os.listdir(ixp_resource_path):
-                filepath = os.path.join(ixp_resource_path, filename)
-                if os.path.isfile(filepath) and filename != ".gitkeep":
-                    files.append(filename)
+            for item in os.listdir(ixp_resource_path):
+                if item != ".gitkeep":
+                    item_path = os.path.join(ixp_resource_path, item)
+                    is_dir = os.path.isdir(item_path)
+                    files.append({
+                        "name": item,
+                        "type": "directory" if is_dir else "file"
+                    })
 
-            return {"files": sorted(files)}
+            return {"files": sorted(files, key=lambda x: (x["type"] == "file", x["name"]))}
         except Exception as e:
             logger.error(f"Failed to list resource files: {str(e)}", exc_info=True)
             raise HTTPException(
@@ -298,6 +302,66 @@ def register_routes(app):
             logger.error(f"Failed to upload file: {str(e)}", exc_info=True)
             raise HTTPException(
                 status_code=500, detail=f"Failed to upload file: {str(e)}"
+            )
+
+    @app.post("/resources/upload-directory")
+    async def upload_resource_directory(files: list[UploadFile] = File(...)):
+        """Upload multiple files preserving directory structure."""
+        try:
+            # Create resources directory if it doesn't exist
+            os.makedirs(ixp_resource_path, exist_ok=True)
+
+            if not files:
+                raise HTTPException(
+                    status_code=400, detail="No files provided"
+                )
+
+            uploaded_files = []
+            dir_name = None
+
+            # Process each file
+            for file in files:
+                # Get the relative path from the file
+                relative_path = file.filename
+                
+                # Extract directory name from the first file's path
+                if dir_name is None and "/" in relative_path:
+                    dir_name = relative_path.split("/")[0]
+                elif dir_name is None:
+                    dir_name = relative_path.rsplit(".", 1)[0]  # fallback to filename without extension
+
+                # Create full path preserving directory structure
+                full_path = os.path.join(ixp_resource_path, relative_path)
+                
+                # Create subdirectories if needed
+                os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+                # Save file
+                with open(full_path, "wb") as f:
+                    content = await file.read()
+                    f.write(content)
+
+                uploaded_files.append(relative_path)
+                logger.info(f"File uploaded: {relative_path}")
+
+            if not uploaded_files:
+                raise HTTPException(
+                    status_code=400, detail="No files were uploaded"
+                )
+
+            logger.info(f"Directory uploaded: {dir_name} with {len(uploaded_files)} files")
+            return {
+                "status": "success",
+                "directory": dir_name,
+                "files_count": len(uploaded_files),
+                "message": f"Directory {dir_name} uploaded successfully with {len(uploaded_files)} files",
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to upload directory: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=500, detail=f"Failed to upload directory: {str(e)}"
             )
 
     @app.post("/rib/compare", response_model=RibComparisonResponse)
