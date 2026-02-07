@@ -92,7 +92,7 @@ def register_routes(app):
             )
 
     @app.get("/machines/stats", response_model=MachineStatsResponse)
-    async def get_machines_stats():
+    async def get_machines_stats_endpoint():
         """Get statistics about running devices/machines."""
         if not digital_twin_state.is_running():
             raise HTTPException(status_code=400, detail="Digital twin is not running")
@@ -112,8 +112,20 @@ def register_routes(app):
 
             lab = net_scenario_manager.get()
 
+            # Check if we already have a generator in state
+            machines_generator = digital_twin_state.get_machines_stats_generator()
+            if machines_generator is None:
+                logger.debug("Creating new machines stats generator...")
+                machines_generator = manager.get_machines_stats(lab=lab)
+                digital_twin_state.set_machines_stats_generator(machines_generator)
+            else:
+                logger.debug("Using existing machines stats generator from state...")
+
+            # Get the next batch from the generator
+            machines_dict = next(machines_generator)
+
             machines_stats = {}
-            for machine_id, stats in next(manager.get_machines_stats(lab=lab)).items():
+            for machine_id, stats in machines_dict.items():
                 machines_stats[machine_id] = {
                     "status": stats.status,
                     "image": stats.image,

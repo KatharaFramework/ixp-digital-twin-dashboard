@@ -13,7 +13,8 @@ class DigitalTwinState:
             "starting": False,
             "net_scenario_manager": None,
             "table_dump": None,
-            "error": None
+            "error": None,
+            "machines_stats_generator": None
         }
     
     def is_running(self) -> bool:
@@ -42,6 +43,14 @@ class DigitalTwinState:
         """Get the table dump."""
         return self._state["table_dump"]
     
+    def get_machines_stats_generator(self) -> Optional[Any]:
+        """Get the cached machines stats generator."""
+        return self._state["machines_stats_generator"]
+    
+    def set_machines_stats_generator(self, generator: Optional[Any]) -> None:
+        """Set the cached machines stats generator."""
+        self._state["machines_stats_generator"] = generator
+    
     def set_starting(self, value: bool) -> None:
         """Set the starting state."""
         self._state["starting"] = value
@@ -69,6 +78,7 @@ class DigitalTwinState:
         self._state["net_scenario_manager"] = None
         self._state["table_dump"] = None
         self._state["error"] = None
+        self._state["machines_stats_generator"] = None
 
 
 # Global state instance
