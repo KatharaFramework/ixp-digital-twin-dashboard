@@ -1,8 +1,36 @@
 import React from 'react';
-import { Card } from 'react-bootstrap';
-import { FaCheckCircle, FaTimesCircle, FaHourglassHalf, FaSpinner } from 'react-icons/fa';
+import { Card, Button } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { FaCheckCircle, FaTimesCircle, FaHourglassHalf, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 
-const StatusCard = ({ running, starting, devicesCount, error }) => {
+const StatusCard = ({ running, starting, devicesCount, error, configMissing }) => {
+    const navigate = useNavigate();
+
+    if (configMissing) {
+        return (
+            <Card className="text-bg-warning mb-3">
+                <Card.Body>
+                    <div className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center">
+                            <FaExclamationTriangle size={24} className="me-2" />
+                            <div>
+                                <div className="fw-bold">Configuration Missing</div>
+                                <div>The ixp.conf configuration file is not present.</div>
+                            </div>
+                        </div>
+                        <Button 
+                            variant="outline-dark" 
+                            size="sm"
+                            onClick={() => navigate('/config')}
+                        >
+                            Configure
+                        </Button>
+                    </div>
+                </Card.Body>
+            </Card>
+        );
+    }
+
     if (error) {
         return (
             <Card className="text-bg-danger mb-3">

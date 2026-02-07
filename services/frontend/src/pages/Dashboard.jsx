@@ -19,6 +19,7 @@ export default function Dashboard() {
     const [alertType, setAlertType] = useState('info');
     const [resourceFiles, setResourceFiles] = useState([]);
     const [routeServers, setRouteServers] = useState([]);
+    const [configMissing, setConfigMissing] = useState(false);
     const [minimizeRibComparison, setMinimizeRibComparison] = useState(false);
 
     const fetchStatus = async () => {
@@ -43,7 +44,7 @@ export default function Dashboard() {
         }
     };
 
-    const fetchRouteServers = async () => {
+    const fetchIxpConfig = async () => {
         try {
             const config = await getIxpConfig();
             if (config.route_servers) {
@@ -53,15 +54,20 @@ export default function Dashboard() {
                 }));
                 setRouteServers(servers);
             }
+            setConfigMissing(false);
         } catch (error) {
             console.error('Error fetching route servers:', error);
+            // Check if config is missing (404 error)
+            if (error.response?.status === 404) {
+                setConfigMissing(true);
+            }
         }
     };
 
     useEffect(() => {
         fetchStatus();
         fetchResourceFiles();
-        fetchRouteServers();
+        fetchIxpConfig();
         const interval = setInterval(fetchStatus, 3000); // Poll every 3 seconds
         return () => clearInterval(interval);
     }, []);
@@ -133,6 +139,7 @@ export default function Dashboard() {
                         starting={status.starting}
                         devicesCount={status.devices_count}
                         error={status.error}
+                        configMissing={configMissing}
                     />
 
                     <ControlPanel
