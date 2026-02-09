@@ -1,15 +1,13 @@
 services:
   backend:
     build: ./services/backend
-    ports:
-      - "8001:8001"
     volumes:
       - ./services/backend:/app
       - /var/run/docker.sock:/var/run/docker.sock
       - ../ixp-digital-twin:/app/src/digital_twin
     environment:
-      - "ORIGIN=http://localhost:5174"
-      - "ENVIRONMENT=dev"
+      - "ORIGIN=http://public.domain.quarantine.ui"
+      - "ENVIRONMENT=prod"
     command: bash -c "cd src && uvicorn main:app --reload --host 0.0.0.0 --port 8001"
     uts: host
     networks:
@@ -22,12 +20,26 @@ services:
     command: npm run dev
     networks:
       - my_network
-    ports:
-      - "5174:5174"
     environment:
-      - "VITE_API_URL=http://localhost:8001"
+      - "VITE_API_URL=https://public.domain.quarantine.ui/api"
     depends_on:
       - backend
+  reverse-proxy:
+    build: ./services/reverse-proxy
+    networks:
+      - my_network
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - "BASIC_USERNAME=username"
+      - "BASIC_PASSWORD=password"
+      - "FORWARD_HOST=localhost"
+      - "FORWARD_PORT=5174"
+      - "FORWARD_PORT_API=8001"
+      - "PUBLIC_DOMAIN=public.domain.quarantine.ui"
+    depends_on:
+      - frontend
 networks:
   my_network:
     driver: bridge
