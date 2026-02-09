@@ -31,9 +31,3 @@ docker compose -f docker-compose-dev.yml up --build
 ```
 
 Note: Use the `--build` flag only on the first run.
-
-## Support
-
-For assistance with IXP-specific configuration, reach out to `contact@kathara.org`.
-
-
