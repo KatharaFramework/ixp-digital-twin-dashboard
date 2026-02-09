@@ -114,11 +114,11 @@ const ControlPanel = ({ running, starting, onStart, onStop, onReload, loading, s
                                         onChange={(e) => setRsOnly(e.target.checked)}
                                         disabled={loading}
                                         className="mb-0"
-                                        title="Reload only the Route Server configuration without restarting all devices"
+                                        title="Reload only the Route Server configuration without starting/stopping devices"
                                     />
                                     <FaInfoCircle
                                         style={{ fontSize: '0.85rem', color: '#6c757d', cursor: 'help' }}
-                                        title="Reload only the Route Server configuration without restarting all devices"
+                                        title="Reload only the Route Server configuration without starting/stopping devices"
                                     />
                                 </Col>
                             </Row>

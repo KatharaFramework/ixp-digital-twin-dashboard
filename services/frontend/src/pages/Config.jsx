@@ -307,7 +307,7 @@ export default function Config() {
 
     return (
         <Container>
-            <h1 className="mb-4">ixp.conf — Configuration</h1>
+            <h1 className="mb-4">IXP Digital Twin Configuration</h1>
 
             {alertMsg && (
                 <Alert variant={alertType} dismissible onClose={() => setAlertMsg(null)}>

@@ -122,8 +122,6 @@ export default function Dashboard() {
 
     return (
         <Container fluid>
-            <h1 className="text-center my-4">IXP Digital Twin Management</h1>
-
             {alertMessage && (
                 <Alert
                     variant={alertType}
