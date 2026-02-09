@@ -23,7 +23,32 @@ The [ixp-digital-twin](https://github.com/KatharaFramework/ixp-digital-twin) too
 
 The dashboard allows you to enable specific quarantine checks for your deployment. For dedicated quarantine check execution, see the [IXP Quarantine Dashboard](https://github.com/KatharaFramework/ixp-quarantine-dashboard).
 
-## Getting Started
+## Prerequisites
+
+To deploy and use the IXP Digital Twin Dashboard, ensure you have the following:
+
+- **Docker**: For containerized deployment
+- **IXP Digital Twin**: The [ixp-digital-twin](https://github.com/KatharaFramework/ixp-digital-twin) repository installed and configured
+
+## Installation 
+
+### Initialize the Digital Twin
+
+Clone the [IXP Digital Twin](https://github.com/KatharaFramework/ixp-digital-twin) repository to initialize your environment.
+
+Assuming a root folder called `digital-twin`, run:
+```bash
+git clone git@github.com:KatharaFramework/ixp-digital-twin.git
+```
+
+### Install the Dashboard
+
+In the `digital-twin` direcory, clone the dashboard repository:
+```bash
+git clone git@github.com:KatharaFramework/ixp-digital-twin-dashboard.git
+```
+
+### Run
 
 To run the dashboard:
 ```
