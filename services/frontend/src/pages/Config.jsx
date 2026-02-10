@@ -4,6 +4,17 @@ import { FaPlus, FaTrash, FaUpload } from 'react-icons/fa';
 import { getIxpConfig, updateIxpConfig, listResourceFiles, uploadResourceFile, uploadResourceDirectory } from '../services/api';
 
 export default function Config() {
+    // Predefined list of quarantine actions in order
+    const QUARANTINE_ACTIONS_ORDER = [
+        'connectivity.CheckPingAction',
+        'connectivity.CheckPingMtuAction',
+        'connectivity.CheckProxyArpAction',
+        'bgp.CheckBgpSessionAction',
+        'bgp.CheckBgpRibAction',
+        'security.CheckServicesAction',
+        'security.CheckTrafficAction'
+    ];
+
     const [originalConfig, setOriginalConfig] = useState(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -144,6 +155,20 @@ export default function Config() {
         const updated = [...rpkiServers];
         updated[index][field] = value;
         setRpkiServers(updated);
+    };
+
+    const updateQuarantineAction = (action, isChecked) => {
+        let updated;
+        if (isChecked) {
+            // Add action while maintaining the predefined order
+            updated = QUARANTINE_ACTIONS_ORDER.filter(a => 
+                quarantineActions.includes(a) || a === action
+            );
+        } else {
+            // Remove action
+            updated = quarantineActions.filter(a => a !== action);
+        }
+        setQuarantineActions(updated);
     };
 
     const handleFileUpload = async (e) => {
@@ -711,97 +736,16 @@ export default function Config() {
                             <Form.Group className="mb-3">
                                 <Form.Label>Quarantine Actions</Form.Label>
                                 <div className="ms-3">
-                                    <Form.Check
-                                        type="checkbox"
-                                        id="action-ping"
-                                        label="connectivity.CheckPingAction"
-                                        checked={quarantineActions.includes('connectivity.CheckPingAction')}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setQuarantineActions([...quarantineActions, 'connectivity.CheckPingAction']);
-                                            } else {
-                                                setQuarantineActions(quarantineActions.filter(a => a !== 'connectivity.CheckPingAction'));
-                                            }
-                                        }}
-                                    />
-                                    <Form.Check
-                                        type="checkbox"
-                                        id="action-ping-mtu"
-                                        label="connectivity.CheckPingMtuAction"
-                                        checked={quarantineActions.includes('connectivity.CheckPingMtuAction')}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setQuarantineActions([...quarantineActions, 'connectivity.CheckPingMtuAction']);
-                                            } else {
-                                                setQuarantineActions(quarantineActions.filter(a => a !== 'connectivity.CheckPingMtuAction'));
-                                            }
-                                        }}
-                                    />
-                                    <Form.Check
-                                        type="checkbox"
-                                        id="action-proxy-arp"
-                                        label="connectivity.CheckProxyArpAction"
-                                        checked={quarantineActions.includes('connectivity.CheckProxyArpAction')}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setQuarantineActions([...quarantineActions, 'connectivity.CheckProxyArpAction']);
-                                            } else {
-                                                setQuarantineActions(quarantineActions.filter(a => a !== 'connectivity.CheckProxyArpAction'));
-                                            }
-                                        }}
-                                    />
-                                    <Form.Check
-                                        type="checkbox"
-                                        id="action-bgp-session"
-                                        label="bgp.CheckBgpSessionAction"
-                                        checked={quarantineActions.includes('bgp.CheckBgpSessionAction')}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setQuarantineActions([...quarantineActions, 'bgp.CheckBgpSessionAction']);
-                                            } else {
-                                                setQuarantineActions(quarantineActions.filter(a => a !== 'bgp.CheckBgpSessionAction'));
-                                            }
-                                        }}
-                                    />
-                                    <Form.Check
-                                        type="checkbox"
-                                        id="action-bgp-rib"
-                                        label="bgp.CheckBgpRibAction"
-                                        checked={quarantineActions.includes('bgp.CheckBgpRibAction')}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setQuarantineActions([...quarantineActions, 'bgp.CheckBgpRibAction']);
-                                            } else {
-                                                setQuarantineActions(quarantineActions.filter(a => a !== 'bgp.CheckBgpRibAction'));
-                                            }
-                                        }}
-                                    />
-                                    <Form.Check
-                                        type="checkbox"
-                                        id="action-services"
-                                        label="security.CheckServicesAction"
-                                        checked={quarantineActions.includes('security.CheckServicesAction')}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setQuarantineActions([...quarantineActions, 'security.CheckServicesAction']);
-                                            } else {
-                                                setQuarantineActions(quarantineActions.filter(a => a !== 'security.CheckServicesAction'));
-                                            }
-                                        }}
-                                    />
-                                    <Form.Check
-                                        type="checkbox"
-                                        id="action-traffic"
-                                        label="security.CheckTrafficAction"
-                                        checked={quarantineActions.includes('security.CheckTrafficAction')}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setQuarantineActions([...quarantineActions, 'security.CheckTrafficAction']);
-                                            } else {
-                                                setQuarantineActions(quarantineActions.filter(a => a !== 'security.CheckTrafficAction'));
-                                            }
-                                        }}
-                                    />
+                                    {QUARANTINE_ACTIONS_ORDER.map((action) => (
+                                        <Form.Check
+                                            key={action}
+                                            type="checkbox"
+                                            id={`action-${action}`}
+                                            label={action}
+                                            checked={quarantineActions.includes(action)}
+                                            onChange={(e) => updateQuarantineAction(action, e.target.checked)}
+                                        />
+                                    ))}
                                 </div>
                             </Form.Group>
 
