@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Container, Form, Button, Alert, Spinner, Row, Col, Card, InputGroup } from 'react-bootstrap';
-import { FaPlus, FaTrash, FaUpload } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
+import { Container, Form, Button, Alert, Spinner, Row, Col, Card } from 'react-bootstrap';
+import { FaPlus, FaTrash } from 'react-icons/fa';
 import { getIxpConfig, updateIxpConfig, listResourceFiles, uploadResourceFile, uploadResourceDirectory } from '../services/api';
+import FileSelector from '../components/FileSelector';
 
 export default function Config() {
     // Predefined list of quarantine actions in order
@@ -43,10 +44,6 @@ export default function Config() {
     const [probeIpV4, setProbeIpV4] = useState('');
     const [probeIpV6, setProbeIpV6] = useState('');
     const [dnsName, setDnsName] = useState('');
-    const fileInputRef = useRef(null);
-    const ribV4FileInputRef = useRef(null);
-    const ribV6FileInputRef = useRef(null);
-    const rsConfigFileInputRefs = useRef({});
 
     useEffect(() => {
         loadConfig();
@@ -83,13 +80,16 @@ export default function Config() {
             const rsArray = [];
             if (data.route_servers) {
                 Object.entries(data.route_servers).forEach(([name, config]) => {
+                    const bw = config.options?.birdwatcher || {};
                     rsArray.push({
                         name,
                         type: config.type || '',
                         image: config.image || '',
                         as_num: config.as_num || '',
                         config: config.config || '',
-                        address: config.address || ''
+                        address: config.address || '',
+                        birdwatcher_port: bw.port || '',
+                        birdwatcher_config: bw.config || ''
                     });
                 });
             }
@@ -130,7 +130,7 @@ export default function Config() {
     };
 
     const addRouteServer = () => {
-        setRouteServers([...routeServers, { name: '', type: '', image: '', as_num: '', config: '', address: '' }]);
+        setRouteServers([...routeServers, { name: '', type: '', image: '', as_num: '', config: '', address: '', birdwatcher_port: '', birdwatcher_config: '' }]);
     };
 
     const removeRouteServer = (index) => {
@@ -171,20 +171,17 @@ export default function Config() {
         setQuarantineActions(updated);
     };
 
-    const handleFileUpload = async (e) => {
+    const handlePeeringConfigUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         setUploading(true);
         setAlertMsg(null);
         try {
-            const result = await uploadResourceFile(file);
-            setAlertMsg(result.message || `File ${file.name} uploaded successfully`);
-            setAlertType('success');
-            // Reload available files
+            await uploadResourceFile(file);
+            setPeeringConfigPath(file.name);
             await loadAvailableFiles();
-            // Reset file input
-            e.target.value = '';
+            setAlertMsg(`File ${file.name} uploaded successfully`);
+            setAlertType('success');
         } catch (err) {
             console.error('Failed to upload file', err);
             setAlertMsg(err.response?.data?.detail || 'Failed to upload file');
@@ -209,7 +206,6 @@ export default function Config() {
             setAlertType('danger');
         } finally {
             setUploading(false);
-            ribV4FileInputRef.current.value = '';
         }
     };
 
@@ -228,11 +224,10 @@ export default function Config() {
             setAlertType('danger');
         } finally {
             setUploading(false);
-            ribV6FileInputRef.current.value = '';
         }
     };
 
-    const handleRsConfigUpload = async (e, idx) => {
+    const handleRsConfigUpload = (idx) => async (e) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
         setUploading(true);
@@ -247,9 +242,24 @@ export default function Config() {
             setAlertType('danger');
         } finally {
             setUploading(false);
-            if (rsConfigFileInputRefs.current[idx]) {
-                rsConfigFileInputRefs.current[idx].value = '';
-            }
+        }
+    };
+
+    const handleBirdwatcherConfigUpload = (idx) => async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            await uploadResourceFile(file);
+            updateRouteServer(idx, 'birdwatcher_config', file.name);
+            await loadAvailableFiles();
+            setAlertMsg(`File ${file.name} uploaded successfully`);
+            setAlertType('success');
+        } catch (err) {
+            setAlertMsg(err.response?.data?.detail || 'Failed to upload file');
+            setAlertType('danger');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -282,13 +292,20 @@ export default function Config() {
             updated.route_servers = {};
             routeServers.forEach(rs => {
                 if (rs.name && rs.name.trim()) {
-                    updated.route_servers[rs.name] = {
+                    const rsData = {
                         type: rs.type,
                         image: rs.image,
                         as_num: rs.as_num ? parseInt(rs.as_num) : rs.as_num,
                         config: rs.config,
                         address: rs.address
                     };
+                    // Add birdwatcher options if configured
+                    if (rs.birdwatcher_port || rs.birdwatcher_config) {
+                        rsData.options = { birdwatcher: {} };
+                        if (rs.birdwatcher_port) rsData.options.birdwatcher.port = parseInt(rs.birdwatcher_port);
+                        if (rs.birdwatcher_config) rsData.options.birdwatcher.config = rs.birdwatcher_config;
+                    }
+                    updated.route_servers[rs.name] = rsData;
                 }
             });
 
@@ -401,33 +418,14 @@ export default function Config() {
 
                             <Form.Group className="mb-3">
                                 <Form.Label>Peering configuration path</Form.Label>
-                                <InputGroup>
-                                    <Form.Control
-                                        as="select"
-                                        value={peeringConfigPath}
-                                        onChange={e => setPeeringConfigPath(e.target.value)}
-                                    >
-                                        <option value="">-- Select file --</option>
-                                        {availableFiles.filter(file => file.type === 'file' && file.name.endsWith('.json')).map(file => (
-                                            <option key={file.name} value={file.name}>
-                                                📄 {file.name}
-                                            </option>
-                                        ))}
-                                    </Form.Control>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        style={{ display: 'none' }}
-                                        onChange={handleFileUpload}
-                                    />
-                                    <Button
-                                        variant="outline-primary"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={uploading}
-                                    >
-                                        <FaUpload />
-                                    </Button>
-                                </InputGroup>
+                                <FileSelector
+                                    value={peeringConfigPath}
+                                    onChange={e => setPeeringConfigPath(e.target.value)}
+                                    onUpload={handlePeeringConfigUpload}
+                                    availableFiles={availableFiles}
+                                    uploading={uploading}
+                                    fileFilter={file => file.type === 'file' && file.name.endsWith('.json')}
+                                />
                             </Form.Group>
                         </Card.Body>
                     </Card>
@@ -459,66 +457,28 @@ export default function Config() {
                                 <Col md={6}>
                                     <Form.Group className="mb-3">
                                         <Form.Label>RIB dump file (IPv4)</Form.Label>
-                                        <InputGroup>
-                                            <Form.Control
-                                                as="select"
-                                                value={ribDumpFileV4}
-                                                onChange={e => setRibDumpFileV4(e.target.value)}
-                                            >
-                                                <option value="">-- Select file --</option>
-                                                {availableFiles.filter(file => file.type === 'file').map(file => (
-                                                    <option key={file.name} value={file.name}>
-                                                        📄 {file.name}
-                                                    </option>
-                                                ))}
-                                            </Form.Control>
-                                            <input
-                                                ref={ribV4FileInputRef}
-                                                type="file"
-                                                style={{ display: 'none' }}
-                                                onChange={handleRibV4Upload}
-                                            />
-                                            <Button
-                                                variant="outline-primary"
-                                                onClick={() => ribV4FileInputRef.current?.click()}
-                                                disabled={uploading}
-                                            >
-                                                <FaUpload />
-                                            </Button>
-                                        </InputGroup>
+                                        <FileSelector
+                                            value={ribDumpFileV4}
+                                            onChange={e => setRibDumpFileV4(e.target.value)}
+                                            onUpload={handleRibV4Upload}
+                                            availableFiles={availableFiles}
+                                            uploading={uploading}
+                                            fileFilter={file => file.type === 'file'}
+                                        />
                                     </Form.Group>
                                 </Col>
 
                                 <Col md={6}>
                                     <Form.Group className="mb-3">
                                         <Form.Label>RIB dump file (IPv6)</Form.Label>
-                                        <InputGroup>
-                                            <Form.Control
-                                                as="select"
-                                                value={ribDumpFileV6}
-                                                onChange={e => setRibDumpFileV6(e.target.value)}
-                                            >
-                                                <option value="">-- Select file --</option>
-                                                {availableFiles.filter(file => file.type === 'file').map(file => (
-                                                    <option key={file.name} value={file.name}>
-                                                        📄 {file.name}
-                                                    </option>
-                                                ))}
-                                            </Form.Control>
-                                            <input
-                                                ref={ribV6FileInputRef}
-                                                type="file"
-                                                style={{ display: 'none' }}
-                                                onChange={handleRibV6Upload}
-                                            />
-                                            <Button
-                                                variant="outline-primary"
-                                                onClick={() => ribV6FileInputRef.current?.click()}
-                                                disabled={uploading}
-                                            >
-                                                <FaUpload />
-                                            </Button>
-                                        </InputGroup>
+                                        <FileSelector
+                                            value={ribDumpFileV6}
+                                            onChange={e => setRibDumpFileV6(e.target.value)}
+                                            onUpload={handleRibV6Upload}
+                                            availableFiles={availableFiles}
+                                            uploading={uploading}
+                                            fileFilter={file => file.type === 'file'}
+                                        />
                                     </Form.Group>
                                 </Col>
                             </Row>
@@ -595,35 +555,15 @@ export default function Config() {
 
                                                 <Form.Group className="mb-3">
                                                     <Form.Label>Config File/Directory</Form.Label>
-                                                    <InputGroup>
-                                                        <Form.Control
-                                                            as="select"
-                                                            value={rs.config}
-                                                            onChange={e => updateRouteServer(idx, 'config', e.target.value)}
-                                                        >
-                                                            <option value="">-- Select file/directory --</option>
-                                                            {availableFiles.map(file => (
-                                                                <option key={file.name} value={file.name}>
-                                                                    {file.type === 'directory' ? '📁' : '📄'} {file.name}
-                                                                </option>
-                                                            ))}
-                                                        </Form.Control>
-                                                        <input
-                                                            ref={el => rsConfigFileInputRefs.current[idx] = el}
-                                                            type="file"
-                                                            webkitdirectory="true"
-                                                            mozbkitdirectory="true"
-                                                            style={{ display: 'none' }}
-                                                            onChange={(e) => handleRsConfigUpload(e, idx)}
-                                                        />
-                                                        <Button
-                                                            variant="outline-primary"
-                                                            onClick={() => rsConfigFileInputRefs.current[idx]?.click()}
-                                                            disabled={uploading}
-                                                        >
-                                                            <FaUpload />
-                                                        </Button>
-                                                    </InputGroup>
+                                                    <FileSelector
+                                                        value={rs.config}
+                                                        onChange={e => updateRouteServer(idx, 'config', e.target.value)}
+                                                        onUpload={handleRsConfigUpload(idx)}
+                                                        availableFiles={availableFiles}
+                                                        uploading={uploading}
+                                                        allowDirectory={true}
+                                                        placeholder="-- Select file/directory --"
+                                                    />
                                                 </Form.Group>
 
                                                 <Form.Group className="mb-3">
@@ -636,6 +576,40 @@ export default function Config() {
                                                 </Form.Group>
                                             </Col>
                                         </Row>
+
+                                        {/* Birdwatcher Options (Optional) - Only for BIRD */}
+                                        {rs.type === 'bird' && (
+                                            <>
+                                                <hr />
+                                                <h6 className="mb-3">Birdwatcher (Optional)</h6>
+                                                <Row>
+                                                    <Col md={6}>
+                                                        <Form.Group className="mb-3">
+                                                            <Form.Label>TCP Port</Form.Label>
+                                                            <Form.Control
+                                                                type="number"
+                                                                value={rs.birdwatcher_port || ''}
+                                                                onChange={e => updateRouteServer(idx, 'birdwatcher_port', e.target.value)}
+                                                                placeholder="e.g., 29184"
+                                                            />
+                                                        </Form.Group>
+                                                    </Col>
+                                                    <Col md={6}>
+                                                        <Form.Group className="mb-3">
+                                                            <Form.Label>Config File</Form.Label>
+                                                            <FileSelector
+                                                                value={rs.birdwatcher_config || ''}
+                                                                onChange={e => updateRouteServer(idx, 'birdwatcher_config', e.target.value)}
+                                                                onUpload={handleBirdwatcherConfigUpload(idx)}
+                                                                availableFiles={availableFiles}
+                                                                uploading={uploading}
+                                                                fileFilter={file => file.type === 'file'}
+                                                            />
+                                                        </Form.Group>
+                                                    </Col>
+                                                </Row>
+                                            </>
+                                        )}
                                     </Card.Body>
                                 </Card>
                             ))
