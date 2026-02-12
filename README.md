@@ -6,6 +6,9 @@ A web-based dashboard for monitoring and managing IXP Digital Twin emulations. T
 
 This dashboard is part of the [ixp-digital-twin](https://github.com/KatharaFramework/ixp-digital-twin) ecosystem. The IXP Digital Twin is a tool that generates emulation-based digital twins of Internet Exchange Points from production network configurations, using Kathará to create a network scenario where route-servers expose the same information as real-world ones.
 
+## Tutorial
+A comprehensive tutorial is available in the [wiki](https://github.com/KatharaFramework/ixp-digital-twin/wiki), explaining how to configure the [digital twin](https://github.com/KatharaFramework/ixp-digital-twin), its [management dashboard](https://github.com/KatharaFramework/ixp-digital-twin-dashboard), and the [quarantine dashboard](https://github.com/KatharaFramework/ixp-quarantine-dashboard).
+
 ## About IXP Digital Twin
 
 The [ixp-digital-twin](https://github.com/KatharaFramework/ixp-digital-twin) tool analyzes production configuration files and generates a Kathará network scenario with:
