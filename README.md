@@ -59,3 +59,6 @@ docker compose -f docker-compose-dev.yml up --build
 ```
 
 Note: Use the `--build` flag only on the first run.
+
+## Acknowledgments
+We would like to thank Emanuele Gigli (@supLeleh) and Gabriele Bianchi (@gabrielebnc), as this project is based on their prototypes.
