@@ -349,8 +349,6 @@ export default function Config() {
 
     return (
         <Container>
-            <h1 className="mb-4">IXP Digital Twin Configuration</h1>
-
             {alertMsg && (
                 <Alert variant={alertType} dismissible onClose={() => setAlertMsg(null)}>
                     {alertMsg}
@@ -404,7 +402,7 @@ export default function Config() {
                         </Card.Header>
                         <Card.Body>
                             <Form.Group className="mb-3">
-                                <Form.Label>Peering configuration type</Form.Label>
+                                <Form.Label>Peering Configuration Type</Form.Label>
                                 <Form.Control
                                     as="select"
                                     value={peeringConfigType}
@@ -417,7 +415,7 @@ export default function Config() {
                             </Form.Group>
 
                             <Form.Group className="mb-3">
-                                <Form.Label>Peering configuration path</Form.Label>
+                                <Form.Label>Peering Configuration Path</Form.Label>
                                 <FileSelector
                                     value={peeringConfigPath}
                                     onChange={e => setPeeringConfigPath(e.target.value)}
@@ -439,7 +437,7 @@ export default function Config() {
                             <Row>
                                 <Col md={6}>
                                     <Form.Group className="mb-3">
-                                        <Form.Label>RIB dumps Type</Form.Label>
+                                        <Form.Label>RIB Dumps Type</Form.Label>
                                         <Form.Control
                                             as="select"
                                             value={ribDumpsType}
@@ -456,7 +454,7 @@ export default function Config() {
                             <Row>
                                 <Col md={6}>
                                     <Form.Group className="mb-3">
-                                        <Form.Label>RIB dump file (IPv4)</Form.Label>
+                                        <Form.Label>RIB Dump File (IPv4)</Form.Label>
                                         <FileSelector
                                             value={ribDumpFileV4}
                                             onChange={e => setRibDumpFileV4(e.target.value)}
@@ -470,7 +468,7 @@ export default function Config() {
 
                                 <Col md={6}>
                                     <Form.Group className="mb-3">
-                                        <Form.Label>RIB dump file (IPv6)</Form.Label>
+                                        <Form.Label>RIB Dump File (IPv6)</Form.Label>
                                         <FileSelector
                                             value={ribDumpFileV6}
                                             onChange={e => setRibDumpFileV6(e.target.value)}
@@ -628,7 +626,7 @@ export default function Config() {
                         </Card.Header>
                         <Card.Body>
                         {rpkiServers.length === 0 ? (
-                            <p className="text-muted">No RPKI servers configured</p>
+                            <p className="text-muted">No RPKI Servers configured</p>
                         ) : (
                             rpkiServers.map((rpki, idx) => (
                                 <Card key={idx} className="mb-3">
@@ -841,7 +839,7 @@ export default function Config() {
                             )}
                         </Button>
                         <Button variant="secondary" onClick={loadConfig} disabled={loading || saving}>
-                            Reload from disk
+                            Reload From Disk
                         </Button>
                         <Button variant="outline-secondary" onClick={() => {
                             // fallback: open raw editor in a new window/tab with pretty JSON
@@ -850,7 +848,7 @@ export default function Config() {
                                 w.document.write(`<pre>${JSON.stringify(originalConfig, null, 4)}</pre>`);
                             }
                         }}>
-                            View raw
+                            View Raw
                         </Button>
                         </Card.Body>
                     </Card>

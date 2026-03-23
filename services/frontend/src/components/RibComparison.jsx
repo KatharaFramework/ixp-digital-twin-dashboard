@@ -102,7 +102,7 @@ const RibComparison = ({ running, resourceFiles, routeServers, minimized, onTogg
                         <FaFlask size={24} className="me-2" />
                         <div>
                             <div className="fw-bold">RIB Comparison</div>
-                            <div>Start the digital twin to use this tool.</div>
+                            <div>Start the Digital Twin to use this tool.</div>
                         </div>
                     </div>
                 </Card.Body>
@@ -238,14 +238,16 @@ const RibComparison = ({ running, resourceFiles, routeServers, minimized, onTogg
                                 </Alert>
                             )}
 
-                            <Button
-                                variant="outline-secondary"
-                                size="sm"
-                                onClick={() => setShowDetails(!showDetails)}
-                                className="mb-3"
-                            >
-                                {showDetails ? 'Hide Details' : 'Show Details'}
-                            </Button>
+                            {comparisonResult.differences_count > 0 ? (
+                                <Button
+                                    variant="outline-secondary"
+                                    size="sm"
+                                    onClick={() => setShowDetails(!showDetails)}
+                                    className="mb-3"
+                                >
+                                    {showDetails ? 'Hide Details' : 'Show Details'}
+                                </Button>
+                            ) : ""}
 
                             {showDetails && (
                                 <div>

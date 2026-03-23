@@ -82,7 +82,7 @@ export default function MachinesStatsTable({ running }) {
     if (!running) {
         return (
             <Alert variant="info" className="mt-4">
-                Start the digital twin to view machines statistics.
+                Start the Digital Twin to view machines statistics.
             </Alert>
         );
     }

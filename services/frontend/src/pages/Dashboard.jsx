@@ -82,8 +82,8 @@ export default function Dashboard() {
             const response = await startDigitalTwin(maxDevices);
             await fetchStatus();
         } catch (error) {
-            console.error('Error starting digital twin:', error);
-            setAlertMessage(error.response?.data?.detail || 'Failed to start digital twin');
+            console.error('Error starting Digital Twin:', error);
+            setAlertMessage(error.response?.data?.detail || 'Failed to start Digital Twin');
             setAlertType('danger');
         } finally {
             setLoading(false);
@@ -97,8 +97,8 @@ export default function Dashboard() {
             const response = await stopDigitalTwin();
             await fetchStatus();
         } catch (error) {
-            console.error('Error stopping digital twin:', error);
-            setAlertMessage(error.response?.data?.detail || 'Failed to stop digital twin');
+            console.error('Error stopping Digital Twin:', error);
+            setAlertMessage(error.response?.data?.detail || 'Failed to stop Digital Twin');
             setAlertType('danger');
         } finally {
             setStopping(false);
@@ -112,8 +112,8 @@ export default function Dashboard() {
             const response = await reloadDigitalTwin(rsOnly, maxDevices);
             await fetchStatus();
         } catch (error) {
-            console.error('Error reloading digital twin:', error);
-            setAlertMessage(error.response?.data?.detail || 'Failed to reload digital twin');
+            console.error('Error reloading Digital Twin:', error);
+            setAlertMessage(error.response?.data?.detail || 'Failed to reload Digital Twin');
             setAlertType('danger');
         } finally {
             setLoading(false);
@@ -162,9 +162,6 @@ export default function Dashboard() {
                     />
                     
                     <MachinesStatsTable running={status.running} />
-
-                    
-
                 </Col>
             </Row>
         </Container>

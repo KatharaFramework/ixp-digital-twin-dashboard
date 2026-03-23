@@ -84,11 +84,6 @@ export const uploadResourceDirectory = async (files) => {
     return { ...response.data, dirName };
 };
 
-export const runQuarantineCheck = async (data) => {
-    const response = await api.post('/quarantine/check', data);
-    return response.data;
-};
-
 export const getMachinesStats = async () => {
     const response = await api.get('/machines/stats');
     return response.data;

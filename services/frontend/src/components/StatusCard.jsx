@@ -70,9 +70,9 @@ const StatusCard = ({ running, starting, devicesCount, error, configMissing }) =
                     <div className="d-flex align-items-center">
                         <FaCheckCircle size={24} className="me-2" />
                         <div>
-                            <div className="fw-bold">Digital Twin Running</div>
+                            <div className="fw-bold">Digital Twin Running!</div>
                             <div>
-                                {devicesCount && `${devicesCount} customer${devicesCount !== 1 ? 's' : ''} deployed`}
+                                {devicesCount && `${devicesCount} customer${devicesCount !== 1 ? 's' : ''} deployed.`}
                             </div>
                         </div>
                     </div>
@@ -88,7 +88,7 @@ const StatusCard = ({ running, starting, devicesCount, error, configMissing }) =
                     <FaHourglassHalf size={24} className="me-2" />
                     <div>
                         <div className="fw-bold">Digital Twin Stopped</div>
-                        <div>Start the digital twin to begin.</div>
+                        <div>Start the Digital Twin to begin.</div>
                     </div>
                 </div>
             </Card.Body>
