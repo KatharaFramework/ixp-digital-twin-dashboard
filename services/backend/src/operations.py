@@ -23,6 +23,40 @@ from state import digital_twin_state
 logger = logging.getLogger(__name__)
 
 
+def fetch_digital_twin() -> None:
+    """Fetch Digital Twin and return it."""
+    digital_twin_state.set_starting(True)
+    digital_twin_state.set_error(None)
+
+    logger.info("Loading settings...")
+    settings = Settings.get_instance()
+    settings.load_from_disk()
+
+    Setting.get_instance().load_from_dict({"manager_type": "docker"})
+
+    net_scenario_manager = NetworkScenarioManager()
+    net_scenario = net_scenario_manager.get()
+    if any([m.api_object.attrs["State"]["Running"] for m in net_scenario.machines.values()]):
+        member_dump_class = MemberDumpFactory(
+            submodule_package="digital_twin"
+        ).get_class_from_name(settings.peering_configuration["type"])
+        entries = member_dump_class().load_from_file(
+            os.path.join(RESOURCES_FOLDER, settings.peering_configuration["path"])
+        )
+
+        table_dump = TableDumpFactory(
+            submodule_package="digital_twin"
+        ).get_class_from_name(settings.rib_dumps["type"])(entries)
+
+        for v, file in settings.rib_dumps["dumps"].items():
+            table_dump.load_from_file(os.path.join(RESOURCES_FOLDER, file))
+
+        digital_twin_state.set_running(True)
+        digital_twin_state.set_starting(False)
+        digital_twin_state.set_net_scenario_manager(net_scenario_manager)
+        digital_twin_state.set_table_dump(table_dump)
+
+
 async def start_digital_twin_async(max_devices: Optional[int] = None):
     """Initialize and start the digital twin in background.
     
@@ -51,16 +85,18 @@ async def start_digital_twin_async(max_devices: Optional[int] = None):
 
         # Load member dump
         logger.info("Loading member dump...")
-        member_dump_class = MemberDumpFactory(submodule_package="digital_twin").get_class_from_name(
-            settings.peering_configuration["type"])
+        member_dump_class = MemberDumpFactory(
+            submodule_package="digital_twin"
+        ).get_class_from_name(settings.peering_configuration["type"])
         entries = member_dump_class().load_from_file(
             os.path.join(RESOURCES_FOLDER, settings.peering_configuration["path"])
         )
 
         # Load table dump
         logger.info("Loading RIB dumps...")
-        table_dump = TableDumpFactory(submodule_package="digital_twin").get_class_from_name(settings.rib_dumps["type"])(
-            entries)
+        table_dump = TableDumpFactory(
+            submodule_package="digital_twin"
+        ).get_class_from_name(settings.rib_dumps["type"])(entries)
 
         for v, file in settings.rib_dumps["dumps"].items():
             table_dump.load_from_file(os.path.join(RESOURCES_FOLDER, file))
@@ -107,7 +143,6 @@ async def start_digital_twin_async(max_devices: Optional[int] = None):
 
         devices_count = len(table_dump.entries)
         logger.info(f"Digital twin started successfully with {devices_count} devices")
-
     except Exception as e:
         logger.error(f"Failed to start digital twin: {str(e)}", exc_info=True)
         digital_twin_state.set_starting(False)
@@ -311,7 +346,7 @@ async def compare_rib(route_server_name: str, resource_file: str) -> dict:
         output = manager.exec(machine_name=route_server_name, command=command, lab=lab, stream=False)
         live_output = output[0] if output[0] else output[1]
         live_output = live_output.decode('utf-8') if isinstance(live_output, bytes) else live_output
-        
+
         # Write live_output to temporary file
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp_file:
             tmp_file.write(live_output)
@@ -341,14 +376,14 @@ async def compare_rib(route_server_name: str, resource_file: str) -> dict:
         live_entries = member_dump_class().load_from_file(
             os.path.join(RESOURCES_FOLDER, settings.peering_configuration["path"])
         )
-        
+
         logger.debug(f"Live entries loaded: {live_entries}")
         live_dump = table_dump_class(live_entries)
         live_dump.load_from_file(temp_file_path)
 
         # Extract all routes from the uploaded dump
         uploaded_routes = _extract_routes_from_entries(uploaded_dump.entries)
-        
+
         live_routes = _extract_routes_from_entries(live_dump.entries)
 
         # Compute differences

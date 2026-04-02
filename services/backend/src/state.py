@@ -5,7 +5,7 @@ from typing import Optional, Any
 
 class DigitalTwinState:
     """Manages the state of the digital twin application."""
-    
+
     def __init__(self):
         """Initialize the digital twin state."""
         self._state = {
@@ -16,61 +16,61 @@ class DigitalTwinState:
             "error": None,
             "machines_stats_generator": None
         }
-    
+
     def is_running(self) -> bool:
         """Check if the digital twin is running."""
         return self._state["running"]
-    
+
     def is_starting(self) -> bool:
         """Check if the digital twin is starting."""
         return self._state["starting"]
-    
+
     def get_error(self) -> Optional[str]:
         """Get the current error, if any."""
         return self._state["error"]
-    
+
     def get_devices_count(self) -> Optional[int]:
         """Get the number of devices in the digital twin."""
         if self._state["table_dump"] is not None:
             return len(self._state["table_dump"].entries)
         return None
-    
+
     def get_net_scenario_manager(self) -> Any:
         """Get the network scenario manager."""
         return self._state["net_scenario_manager"]
-    
+
     def get_table_dump(self) -> Any:
         """Get the table dump."""
         return self._state["table_dump"]
-    
+
     def get_machines_stats_generator(self) -> Optional[Any]:
         """Get the cached machines stats generator."""
         return self._state["machines_stats_generator"]
-    
+
     def set_machines_stats_generator(self, generator: Optional[Any]) -> None:
         """Set the cached machines stats generator."""
         self._state["machines_stats_generator"] = generator
-    
+
     def set_starting(self, value: bool) -> None:
         """Set the starting state."""
         self._state["starting"] = value
-    
+
     def set_running(self, value: bool) -> None:
         """Set the running state."""
         self._state["running"] = value
-    
+
     def set_error(self, value: Optional[str]) -> None:
         """Set the error message."""
         self._state["error"] = value
-    
+
     def set_net_scenario_manager(self, manager: Any) -> None:
         """Set the network scenario manager."""
         self._state["net_scenario_manager"] = manager
-    
+
     def set_table_dump(self, dump: Any) -> None:
         """Set the table dump."""
         self._state["table_dump"] = dump
-    
+
     def reset(self) -> None:
         """Reset all state to initial values."""
         self._state["running"] = False

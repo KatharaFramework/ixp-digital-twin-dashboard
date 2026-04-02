@@ -56,7 +56,7 @@ def register_routes(app):
 
     @app.post("/start", response_model=StartDigitalTwinResponse)
     async def start_digital_twin(
-        request: StartDigitalTwinRequest, background_tasks: BackgroundTasks
+            request: StartDigitalTwinRequest, background_tasks: BackgroundTasks
     ):
         """Start the digital twin network scenario."""
         if digital_twin_state.is_running():
@@ -333,7 +333,7 @@ def register_routes(app):
             for file in files:
                 # Get the relative path from the file
                 relative_path = file.filename
-                
+
                 # Extract directory name from the first file's path
                 if dir_name is None and "/" in relative_path:
                     dir_name = relative_path.split("/")[0]
@@ -342,7 +342,7 @@ def register_routes(app):
 
                 # Create full path preserving directory structure
                 full_path = os.path.join(ixp_resource_path, relative_path)
-                
+
                 # Create subdirectories if needed
                 os.makedirs(os.path.dirname(full_path), exist_ok=True)
 

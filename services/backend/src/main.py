@@ -6,10 +6,12 @@ IXP Digital Twin network scenarios and quarantine checks.
 """
 
 import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routes import register_routes
+from operations import fetch_digital_twin
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,16 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
-    """Create and configure the FastAPI application.
-    
-    Returns:
-        FastAPI: Configured application instance
-    """
-    app = FastAPI(
-        title="IXP Digital Twin API",
-        description="API for managing IXP Digital Twin network scenarios and quarantine checks",
-        version="1.0.0"
-    )
+    app = FastAPI()
 
     # Configure CORS middleware
     app.add_middleware(
@@ -39,13 +32,12 @@ def create_app() -> FastAPI:
 
     # Register all routes
     register_routes(app)
+    fetch_digital_twin()
 
     return app
 
 
-# Create the application instance
 app = create_app()
-
 
 if __name__ == "__main__":
     import uvicorn
