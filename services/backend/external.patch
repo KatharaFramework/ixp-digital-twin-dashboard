@@ -1,0 +1,15 @@
+--- DockerLinkO.py	2026-04-02 18:51:14
++++ DockerLink.py	2026-04-02 18:41:47
+@@ -147,9 +147,9 @@
+                 }
+             )
+ 
+-        if link.external:
+-            logging.debug("External Interfaces required, connecting them...")
+-            self._attach_external_interfaces(link.external, link.api_object)
++            if link.external:
++                logging.debug("External Interfaces required, connecting them...")
++                self._attach_external_interfaces(link.external, link.api_object)
+ 
+     def undeploy(self, lab_hash: str, selected_links: Optional[Set[str]] = None) -> None:
+         """Undeploy all the collision domains of the scenario specified by lab_hash.
