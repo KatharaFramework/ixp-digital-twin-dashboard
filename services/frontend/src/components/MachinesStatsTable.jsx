@@ -34,12 +34,12 @@ export default function MachinesStatsTable({ running }) {
     useEffect(() => {
         fetchMachinesStats();
         const interval = setInterval(() => {
-            if (isPolling) {
+            if (isPolling && !loading) {
                 fetchMachinesStats();
             }
         }, 5000); // Poll every 5 seconds
         return () => clearInterval(interval);
-    }, [running, isPolling]);
+    }, [running, loading, isPolling]);
 
     const handleOpenExecModal = (machineName) => {
         setSelectedMachine(machineName);
