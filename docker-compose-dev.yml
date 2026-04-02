@@ -4,7 +4,6 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - ./services/backend:/app
       - /var/run/docker.sock:/var/run/docker.sock
       - ../ixp-digital-twin:/app/src/digital_twin
     environment:

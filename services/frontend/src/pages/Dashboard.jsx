@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
 import StatusCard from '../components/StatusCard';
 import ControlPanel from '../components/ControlPanel';
@@ -21,15 +21,13 @@ export default function Dashboard() {
     const [routeServers, setRouteServers] = useState([]);
     const [configMissing, setConfigMissing] = useState(false);
     const [minimizeRibComparison, setMinimizeRibComparison] = useState(false);
-    const [labStatusLoading, setLabStatusLoading] = useState(false);
-    const [resourceStatusLoading, setResourceStatusLoading] = useState(false);
-    const [ixpConfigStatusLoading, setIxpConfigStatusLoading] = useState(false);
-
+    const labStatusLoadingRef = useRef(false);
+    const resourceStatusLoadingRef = useRef(false);
+    const ixpConfigStatusLoadingRef = useRef(false);
 
     const fetchStatus = async () => {
-        if (labStatusLoading) return;
-
-        setLabStatusLoading(true);
+        if (labStatusLoadingRef.current) return;
+        labStatusLoadingRef.current = true;
         try {
             const data = await getStatus();
             setStatus(data);
@@ -40,28 +38,26 @@ export default function Dashboard() {
                 error: error.response?.data?.detail || 'Failed to connect to backend'
             }));
         } finally {
-            setLabStatusLoading(false);
+            labStatusLoadingRef.current = false;
         }
     };
 
     const fetchResourceFiles = async () => {
-        if (resourceStatusLoading) return;
-
-        setResourceStatusLoading(true);
+        if (resourceStatusLoadingRef.current) return;
+        resourceStatusLoadingRef.current = true;
         try {
             const data = await listResourceFiles();
             setResourceFiles(data.files || []);
         } catch (error) {
             console.error('Error fetching resource files:', error);
         } finally {
-            setResourceStatusLoading(false);
+            resourceStatusLoadingRef.current = false;
         }
     };
 
     const fetchIxpConfig = async () => {
-        if (ixpConfigStatusLoading) return;
-
-        setIxpConfigStatusLoading(true);
+        if (ixpConfigStatusLoadingRef.current) return;
+        ixpConfigStatusLoadingRef.current = true;
         try {
             const config = await getIxpConfig();
             // Check if config is empty (file not present)
@@ -82,7 +78,7 @@ export default function Dashboard() {
             console.error('Error fetching route servers:', error);
             setConfigMissing(true);
         } finally {
-            setIxpConfigStatusLoading(false);
+            ixpConfigStatusLoadingRef.current = false;
         }
     };
 
