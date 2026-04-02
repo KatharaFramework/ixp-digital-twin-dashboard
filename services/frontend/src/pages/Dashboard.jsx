@@ -21,8 +21,15 @@ export default function Dashboard() {
     const [routeServers, setRouteServers] = useState([]);
     const [configMissing, setConfigMissing] = useState(false);
     const [minimizeRibComparison, setMinimizeRibComparison] = useState(false);
+    const [labStatusLoading, setLabStatusLoading] = useState(false);
+    const [resourceStatusLoading, setResourceStatusLoading] = useState(false);
+    const [ixpConfigStatusLoading, setIxpConfigStatusLoading] = useState(false);
+
 
     const fetchStatus = async () => {
+        if (labStatusLoading) return;
+
+        setLabStatusLoading(true);
         try {
             const data = await getStatus();
             setStatus(data);
@@ -32,19 +39,29 @@ export default function Dashboard() {
                 ...prev,
                 error: error.response?.data?.detail || 'Failed to connect to backend'
             }));
+        } finally {
+            setLabStatusLoading(false);
         }
     };
 
     const fetchResourceFiles = async () => {
+        if (resourceStatusLoading) return;
+
+        setResourceStatusLoading(true);
         try {
             const data = await listResourceFiles();
             setResourceFiles(data.files || []);
         } catch (error) {
             console.error('Error fetching resource files:', error);
+        } finally {
+            setResourceStatusLoading(false);
         }
     };
 
     const fetchIxpConfig = async () => {
+        if (ixpConfigStatusLoading) return;
+
+        setIxpConfigStatusLoading(true);
         try {
             const config = await getIxpConfig();
             // Check if config is empty (file not present)
@@ -64,6 +81,8 @@ export default function Dashboard() {
         } catch (error) {
             console.error('Error fetching route servers:', error);
             setConfigMissing(true);
+        } finally {
+            setIxpConfigStatusLoading(false);
         }
     };
 
