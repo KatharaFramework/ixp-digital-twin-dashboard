@@ -6,6 +6,7 @@ import { getMachinesStats, executeMachineCommand } from '../services/api';
 export default function MachinesStatsTable({ running }) {
     const [machines, setMachines] = useState({});
     const [loading, setLoading] = useState(false);
+    const loadingRef = useRef(false);
     const [error, setError] = useState(null);
     const [showExecModal, setShowExecModal] = useState(false);
     const [selectedMachine, setSelectedMachine] = useState(null);
@@ -14,10 +15,12 @@ export default function MachinesStatsTable({ running }) {
     const [execOutput, setExecOutput] = useState(null);
     const [execError, setExecError] = useState(null);
     const [isPolling, setIsPolling] = useState(true);
+    const isPollingRef = useRef(true);
 
     const fetchMachinesStats = async () => {
         if (!running) return;
 
+        loadingRef.current = true;
         setLoading(true);
         setError(null);
         try {
@@ -27,6 +30,7 @@ export default function MachinesStatsTable({ running }) {
             console.error('Error fetching machines stats:', err);
             setError(err.response?.data?.detail || 'Failed to fetch machines statistics');
         } finally {
+            loadingRef.current = false;
             setLoading(false);
         }
     };
@@ -34,12 +38,12 @@ export default function MachinesStatsTable({ running }) {
     useEffect(() => {
         fetchMachinesStats();
         const interval = setInterval(() => {
-            if (isPolling && !loading) {
+            if (isPollingRef.current && !loadingRef.current) {
                 fetchMachinesStats();
             }
         }, 5000); // Poll every 5 seconds
         return () => clearInterval(interval);
-    }, [running, loading, isPolling]);
+    }, [running]);
 
     const handleOpenExecModal = (machineName) => {
         setSelectedMachine(machineName);
@@ -126,7 +130,7 @@ export default function MachinesStatsTable({ running }) {
                 <Button
                     variant={isPolling ? "warning" : "success"}
                     size="sm"
-                    onClick={() => setIsPolling(!isPolling)}
+                    onClick={() => {setIsPolling(!isPolling); isPollingRef.current = isPolling;}}
                     title={isPolling ? "Stop polling" : "Start polling"}
                 >
                     {isPolling ? (

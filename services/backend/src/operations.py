@@ -124,10 +124,6 @@ async def start_digital_twin_async(max_devices: Optional[int] = None):
         logger.info("Interconnecting devices...")
         net_scenario_manager.interconnect(table_dump)
 
-        # Undeploy any existing scenario
-        logger.info("Cleaning up any existing deployment...")
-        net_scenario_manager.undeploy()
-
         # Deploy the scenario
         logger.info("Deploying network scenario...")
         net_scenario_manager.deploy_chunks()
