@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Table, Alert, Spinner, Button, Modal, Form } from 'react-bootstrap';
 import { FaTerminal, FaPause, FaPlay } from 'react-icons/fa';
 import { getMachinesStats, executeMachineCommand } from '../services/api';
