@@ -25,9 +25,6 @@ logger = logging.getLogger(__name__)
 
 def fetch_digital_twin() -> None:
     """Fetch Digital Twin and return it."""
-    digital_twin_state.set_starting(True)
-    digital_twin_state.set_error(None)
-
     logger.info("Loading settings...")
     settings = Settings.get_instance()
     settings.load_from_disk()
@@ -53,6 +50,7 @@ def fetch_digital_twin() -> None:
 
         digital_twin_state.set_running(True)
         digital_twin_state.set_starting(False)
+        digital_twin_state.set_error(None)
         digital_twin_state.set_net_scenario_manager(net_scenario_manager)
         digital_twin_state.set_table_dump(table_dump)
 
