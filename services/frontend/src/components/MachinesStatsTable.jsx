@@ -3,7 +3,7 @@ import { Table, Alert, Spinner, Button, Modal, Form } from 'react-bootstrap';
 import { FaTerminal, FaPause, FaPlay } from 'react-icons/fa';
 import { getMachinesStats, executeMachineCommand } from '../services/api';
 
-export default function MachinesStatsTable({ running }) {
+export default function MachinesStatsTable({ running, startingRef }) {
     const [machines, setMachines] = useState({});
     const [loading, setLoading] = useState(false);
     const loadingRef = useRef(false);
@@ -19,6 +19,8 @@ export default function MachinesStatsTable({ running }) {
 
     const fetchMachinesStats = async () => {
         if (!running) return;
+        if (startingRef.current) return;
+        if (loadingRef.current) return;
 
         loadingRef.current = true;
         setLoading(true);
@@ -38,7 +40,7 @@ export default function MachinesStatsTable({ running }) {
     useEffect(() => {
         fetchMachinesStats();
         const interval = setInterval(() => {
-            if (isPollingRef.current && !loadingRef.current) {
+            if (isPollingRef.current) {
                 fetchMachinesStats();
             }
         }, 5000); // Poll every 5 seconds
@@ -130,7 +132,7 @@ export default function MachinesStatsTable({ running }) {
                 <Button
                     variant={isPolling ? "warning" : "success"}
                     size="sm"
-                    onClick={() => {setIsPolling(!isPolling); isPollingRef.current = isPolling;}}
+                    onClick={() => {setIsPolling(!isPolling); isPollingRef.current = !isPollingRef.current;}}
                     title={isPolling ? "Stop polling" : "Start polling"}
                 >
                     {isPolling ? (

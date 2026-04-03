@@ -70,19 +70,6 @@ const ControlPanel = ({ running, starting, onStart, onStop, onReload, loading, s
                                         </>
                                     )}
                                 </Button>
-
-                                {/* TODO: Uncomment for development - Max devices selector */}
-                                {/* <Form.Group className="mb-0">
-                                    <Form.Control
-                                        type="number"
-                                        placeholder="Max Devices"
-                                        value={maxDevices}
-                                        onChange={(e) => setMaxDevices(e.target.value)}
-                                        disabled={running || starting || loading}
-                                        min="1"
-                                        title="Limit the number of devices to start for faster deployment"
-                                    />
-                                </Form.Group> */}
                             </div>
                         </Col>
 

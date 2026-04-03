@@ -7,12 +7,8 @@ import RibComparison from '../components/RibComparison';
 import { getStatus, startDigitalTwin, stopDigitalTwin, reloadDigitalTwin, getIxpConfig, listResourceFiles } from '../services/api';
 
 export default function Dashboard() {
-    const [status, setStatus] = useState({
-        running: false,
-        starting: false,
-        devices_count: null,
-        error: null
-    });
+    const [status, setStatus] = useState({running: false, starting: false, devices_count: null, error: null});
+    const startingRef = useRef(false);
     const [loading, setLoading] = useState(false);
     const [stopping, setStopping] = useState(false);
     const [alertMessage, setAlertMessage] = useState(null);
@@ -31,6 +27,7 @@ export default function Dashboard() {
         try {
             const data = await getStatus();
             setStatus(data);
+            startingRef.current = data.starting;
         } catch (error) {
             console.error('Error fetching status:', error);
             setStatus(prev => ({
@@ -91,6 +88,8 @@ export default function Dashboard() {
     }, []);
 
     const handleStart = async (maxDevices) => {
+        startingRef.current = true;
+
         setLoading(true);
         setAlertMessage(null);
         try {
@@ -102,6 +101,8 @@ export default function Dashboard() {
             setAlertType('danger');
         } finally {
             setLoading(false);
+
+            startingRef.current = false;
         }
     };
 
@@ -121,6 +122,8 @@ export default function Dashboard() {
     };
 
     const handleReload = async (rsOnly = false, maxDevices = null) => {
+        startingRef.current = true;
+
         setLoading(true);
         setAlertMessage(null);
         try {
@@ -131,6 +134,7 @@ export default function Dashboard() {
             setAlertMessage(error.response?.data?.detail || 'Failed to reload Digital Twin');
             setAlertType('danger');
         } finally {
+            startingRef.current = false;
             setLoading(false);
         }
     };
@@ -176,7 +180,7 @@ export default function Dashboard() {
                         onToggleMinimize={() => setMinimizeRibComparison(!minimizeRibComparison)}
                     />
                     
-                    <MachinesStatsTable running={status.running} />
+                    <MachinesStatsTable running={status.running} startingRef={startingRef} />
                 </Col>
             </Row>
         </Container>
